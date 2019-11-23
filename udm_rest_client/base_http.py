@@ -650,7 +650,8 @@ class UdmObject(BaseObject):
                 logger.info(
                     "Moving {!r} to new position {!r}.".format(self, self.position)
                 )
-                self.dn = await self._move(self.position)
+                api_obj = await self._move(self.position)
+                await self._copy_from_api_instance_obj(api_obj)
                 logger.info("Finished moving object, new DN: %r", self.dn)
 
             if diff_dict == {"position": self._api_obj.position}:
@@ -810,15 +811,13 @@ class UdmObject(BaseObject):
             "superordinate": self.superordinate,
         }
 
-    async def _move(self, position: str) -> str:
+    async def _move(self, position: str) -> ApiModel:
         """
         Change the `position` ob an object.
-        Side effect: will set ``self._api_obj`` to data received from the UDM
-        REST API for the object at the new location.
 
         :param str position: DN of the objects new position
-        :return: the objects new DN
-        :rtype: str
+        :return: the new ApiModel object from the UDM REST API
+        :rtype: ApiModel
         """
         # workaround for Bug #50262: use PUT instead of PATCH
         self._api_obj.position = position
@@ -856,8 +855,7 @@ class UdmObject(BaseObject):
                 for k, v in openapi_model_cls.attribute_map.items()
                 if v in udm_api_response
             )
-            self._api_obj = openapi_model_cls(**api_model_kwargs)
-            return udm_api_response["dn"]
+            return openapi_model_cls(**api_model_kwargs)
 
     async def _follow_move_redirects(
         self, move_progress_url: str, position: str
