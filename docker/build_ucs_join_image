@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+set -e
+set -x
+
+if [ "$1" = "--testing" ]; then
+  export UCS_REPOS="testing"
+else
+  export UCS_REPOS="stable"
+fi
+
+. ./common.sh
+
+docker-compose down --rmi local
+
+echo "Building image '$UCS_JOINED_TARGET_DOCKER_IMG_VERSION'..."
+docker-compose up --build || exit 1
+docker-compose images || true
+IMG_NAME="$(basename "$PWD")_ucs_1"
+docker commit "$IMG_NAME" "$UCS_JOINED_TARGET_DOCKER_IMG_VERSION"
+
+echo "Tagging new image as latest..."
+docker tag "$UCS_JOINED_TARGET_DOCKER_IMG_VERSION" "$UCS_JOINED_TARGET_DOCKER_IMG_LATEST"
+
+docker-compose down --rmi local

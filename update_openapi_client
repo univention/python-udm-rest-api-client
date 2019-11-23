@@ -1,0 +1,208 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Script to update the OpenAPI client library used by the udm-rest-client
+library.
+"""
+
+import asyncio
+import functools
+import os
+import subprocess
+import sys
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import click
+import docker
+import requests
+from urllib3.exceptions import InsecureRequestWarning
+
+try:
+    from pip import main as pip_main
+except ImportError:
+    from pip._internal import main as pip_main
+
+
+DOCKER_IMAGE = "openapitools/openapi-generator-cli:latest"
+JAR_URL = "http://central.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.0/openapi-generator-cli-4.2.0.jar"
+TARGET_PYTHON_PACKAGE_NAME = "openapi_client_udm"
+TARGET_SCHEMA_FILENAME = "udm_openapi.json"
+OPENAPI_GENERATE_COMMAND_COMMON = (
+    f"generate -g python --library asyncio --package-name {TARGET_PYTHON_PACKAGE_NAME}"
+)
+DOCKER_RUN_COMMAND = f"{OPENAPI_GENERATE_COMMAND_COMMON} -i /local/{TARGET_SCHEMA_FILENAME} -o /local/python"
+JAVA_COMPILE_CMD = f"java -jar {{jar}} {OPENAPI_GENERATE_COMMAND_COMMON} -i {{schema}} -o {{target_dir}}/python"
+OPENAPI_SCHEMA_URL = "https://{host}/univention/udm/openapi.json"
+
+
+def coro(f):
+    """asyncio for click (https://github.com/pallets/click/issues/85)"""
+
+    if sys.version_info.major == 3 and sys.version_info.minor < 7:  # pragma: no cover
+        # Python 3.5 and 3.6 compatible code
+        f = asyncio.coroutine(f)
+
+        def wrapper(*args, **kwargs):
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(f(*args, **kwargs))
+
+        return functools.update_wrapper(wrapper, f)
+    else:
+        # Python 3.7+ compatible code
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            return asyncio.run(f(*args, **kwargs))
+
+        return wrapper
+
+
+def print_error_and_exit(msg, exit_code=1):
+    click.secho(msg, fg="red")
+    sys.exit(exit_code)
+
+
+def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
+    docker_client = docker.from_env()
+    try:
+        version = docker_client.version()
+        click.echo(
+            "Docker daemon: {v[Version]} ({v[ApiVersion]}) {v[Os]} {v[Arch]} {v[KernelVersion]}".format(
+                v=version
+            )
+        )
+    except requests.ConnectionError as exc:
+        print_error_and_exit(f"Connecting to the Docker daemon: {exc!s}")
+    click.echo(f"Downloading/updating Docker image {DOCKER_IMAGE!r} (~130 MiB)...")
+    docker_client.images.pull(DOCKER_IMAGE)
+    click.echo(f"Starting Docker container and generating Python code...")
+    docker_log = docker_client.containers.run(
+        image=DOCKER_IMAGE,
+        command=DOCKER_RUN_COMMAND,
+        auto_remove=True,
+        user=os.getuid(),
+        volumes={target_dir: {"bind": "/local", "mode": "rw"}},
+    )
+    if not quiet:
+        click.echo(docker_log)
+    if keep_image:
+        click.echo(f"Keeping Docker image {DOCKER_IMAGE}.")
+    else:
+        click.echo(f"Removing Docker image {DOCKER_IMAGE}...")
+        docker_client.images.remove(DOCKER_IMAGE)
+
+
+def download_jar(target_path: Path):
+    click.echo(f"Downloading OpenAPI generator JAR (~19 MiB)...")
+    try:
+        with requests.get(JAR_URL, stream=True) as resp, target_path.open("wb") as fp:
+            if resp.status_code != 200:
+                print_error_and_exit(
+                    f"Error downloading OpenAPI generator JAR from {JAR_URL!r}: [{resp.status_code}] {resp.reason}"
+                )
+            for chunk in resp.iter_content(chunk_size=8192):
+                if chunk:
+                    fp.write(chunk)
+            click.echo(f"Downloaded {fp.tell() / 1024:.1f} KiB.")
+    except requests.ConnectionError as exc:
+        print_error_and_exit(str(exc))
+
+
+def run_openapi_generator_local_java(target_dir, quiet):
+    jar_path = Path(target_dir, "openapi-generator.jar")
+    download_jar(jar_path)
+    cmd = JAVA_COMPILE_CMD.format(
+        jar=jar_path,
+        schema=str(Path(target_dir, TARGET_SCHEMA_FILENAME)),
+        target_dir=target_dir,
+    ).split()
+    click.echo(f"Starting to generate Python code...")
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    stdout, stderr = process.communicate()
+    if not quiet:
+        click.echo(stdout.decode())
+
+
+def get_openapi_schema(host: str, secure: bool) -> str:
+    url = OPENAPI_SCHEMA_URL.format(host=host)
+
+    click.echo(f"Downloading OpenAPI schema from {url!r}...")
+
+    request_kwargs = {}
+    if not secure:
+        request_kwargs["verify"] = False
+        requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
+    try:
+        resp = requests.get(url, **request_kwargs)
+    except requests.ConnectionError as exc:
+        print_error_and_exit(str(exc))
+    if resp.status_code != 200:
+        print_error_and_exit(
+            f"Error downloading OpenAPI schema from {url!r}: [{resp.status_code}] {resp.reason}"
+        )
+    txt = resp.text
+    click.echo(f"Downloaded {len(txt)/1024:.1f} KiB.")
+    return txt
+
+
+@click.command(
+    help="Update the OpenAPI client library used by the udm-rest-client "
+    "library, using the OpenAPI schema from UCS server 'HOST' (FQDN or IP"
+    " address)."
+)
+@click.argument("host")
+@click.option(
+    "--generator",
+    type=click.Choice(["docker", "java"], case_sensitive=False),
+    required=True,
+    help="Download and use an OpenAPI Generator either as a Docker container "
+    "or as a JAR file. Requires either a running Docker daemon or a local"
+    " Java (>=8) installation.",
+)
+@click.option(
+    "--keep-image/--dont-keep-image",
+    default=False,
+    help="Whether to keep the OpenAPI Generator Docker image (when '--generator"
+    " docker' is used).",
+)
+@click.option(
+    "--secure/--insecure",
+    default=True,
+    help="Whether to ignore an SSL verification error.",
+)
+@click.option(
+    "--quiet/--verbose",
+    default=True,
+    help="Whether to print the output of the OpenAPI Generator to the screen.",
+)
+@coro
+async def update_openapi_client(
+    host: str, generator: str, keep_image: bool, secure: bool, quiet: bool
+):
+    if not host:
+        print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
+    txt = get_openapi_schema(host, secure)
+    with TemporaryDirectory() as temp_dir, open(
+        Path(temp_dir, TARGET_SCHEMA_FILENAME), "w"
+    ) as temp_file_fp:
+        temp_file_fp.write(txt)
+        temp_file_fp.flush()
+
+        click.echo(
+            f"Generating OpenAPI client library {TARGET_PYTHON_PACKAGE_NAME!r}"
+            f" using {generator!r} mechanism..."
+        )
+        if generator == "docker":
+            run_openapi_generator_docker_container(temp_dir, quiet, keep_image)
+        else:
+            run_openapi_generator_local_java(temp_dir, quiet)
+        click.echo("Installing package via pip...")
+        pip_main.main(
+            ["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))]
+        )
+
+
+if __name__ == "__main__":
+    update_openapi_client()

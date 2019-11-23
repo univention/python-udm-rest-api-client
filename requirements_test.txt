@@ -1,0 +1,10 @@
+attrs
+docker
+factory_boy
+faker
+ldap3
+pytest
+pytest-asyncio
+pytest-runner
+requests
+ruamel.yaml

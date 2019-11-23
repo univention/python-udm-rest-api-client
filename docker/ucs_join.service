@@ -1,0 +1,11 @@
+[Unit]
+Description=Join system
+After=network.target apache2.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/ucs_join.sh
+
+[Install]
+WantedBy=multi-user.target

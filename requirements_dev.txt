@@ -1,0 +1,10 @@
+black
+bumpversion
+coverage
+flake8
+isort
+Sphinx
+tox
+twine
+watchdog
+wheel

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+exec > /var/log/univention/ucs_join_stable.log
+exec 2>&1
+
+set +e
+set +x
+
+echo "Giving the system time to settle down..."
+sleep 15
+
+echo "Patching bind join script..."
+sed --in-place 's/\twait_for_dns/service univention-bind-ldap start; wait_for_dns/g' /usr/lib/univention-install/90univention-bind-post.inst
+
+echo "Starting setup-join..."
+if ! [ -e /var/cache/univention-system-setup/profile ] && [ -e /var/cache/univention-system-setup/profile.bak ]; then
+  # UMC installer moved profile away
+  mv -v /var/cache/univention-system-setup/profile.bak /var/cache/univention-system-setup/profile
+fi
+/usr/lib/univention-system-setup/scripts/setup-join.sh
+
+echo "Installing UDM REST API..."
+univention-install -y univention-directory-manager-rest
+
+echo "Setting UCRV nameserver to fixed value..."
+ucr set nameserver1=127.0.0.1
+
+echo "Cleanup..."
+apt-get clean
+apt-get -y autoremove
+rm -rf  /root/* /tmp/* /var/cache/univention-appcenter/* /var/lib/apt/lists/* /var/tmp/*
+
+echo "Disabling myself"
+systemctl disable ucs_join.service
+
+echo "Shutting down..."
+poweroff
