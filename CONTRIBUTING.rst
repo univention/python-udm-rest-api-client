@@ -77,8 +77,16 @@ Ready to contribute? Here's how to set up `udm_rest_client` for local developmen
     $ cd udm_rest_client/
     $ python3 -m venv venv
     $ . venv/bin/activate
-    $ python3 setup.py develop
-    $ update_openapi_client --generator docker ucs.master.fqdn.or.ip
+    $ pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt
+    $ make install
+
+3.1 Install the OpenAPI client library using a UCS in a Docker container::
+
+    $ make pip-install-openapi-client
+
+3.2 Or install it using your UCS server::
+
+    $ update_openapi_client --generator <docker|java> [--insecure] ucs.master.fqdn.or.ip
 
 4. Create a branch for local development::
 
@@ -86,12 +94,12 @@ Ready to contribute? Here's how to set up `udm_rest_client` for local developmen
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8 etc and the
+5. When you're done making changes, check that your changes pass the style checks and the
    tests, including testing other Python versions with tox::
 
     $ make lint
     $ make test
-    $ tox
+    $ make test-all
 
 5.1 Fix format and coverage problems::
 

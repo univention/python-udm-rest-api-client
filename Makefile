@@ -167,7 +167,7 @@ dist: clean ## builds source and wheel package
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
-	python setup.py install
+	python setup.py develop
 
 build-docker-image: ## build docker image (a joined UCS system with a running UDM REST API)
 	@if $(DOCKER_IMG_EXISTS); then \

@@ -2,7 +2,7 @@
 Python UDM REST Client
 ======================
 
-|python| |license| |code style|
+|python| |license| |code style| |codecov|
 
 Python library to interact with the Univention `UDM REST API`_, implements the interface o the `Python UDM API`_.
 
@@ -123,3 +123,5 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 .. |code style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :alt: Code style: black
     :target: https://github.com/python/black
+.. |codecov| image:: https://codecov.io/gh/univention/python-udm-rest-api-client/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/univention/python-udm-rest-api-client
