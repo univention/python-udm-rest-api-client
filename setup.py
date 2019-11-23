@@ -48,7 +48,7 @@ setup(
     tests_require=test_requirements,
     python_requires=">=3.6",
     scripts=["update_openapi_client"],
-    url="https://github.com/univention/python-udm-rest-client",
+    url="https://github.com/univention/python-udm-rest-api-client",
     version="0.1.0",
     zip_safe=False,
 )
