@@ -17,7 +17,6 @@ from .exceptions import (
     UnknownModuleType,
 )
 from .udm import UDM
-from .version import __author__, __email__, __version__
 
 __all__ = [
     "UDM",
@@ -35,3 +34,6 @@ __all__ = [
     "UnknownModuleType",
     "APICommunicationError",
 ]
+__author__ = """Daniel Troeder"""
+__email__ = "troeder@univention.de"
+__version__ = "0.1.0"

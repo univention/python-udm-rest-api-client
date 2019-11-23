@@ -71,7 +71,7 @@ except ImportError as exc:  # pragma: no cover
 # that code doesn't work when something goes wrong:
 try:
     del openapi_client_udm.rest.RESTClientObject.__del__
-except AttributeError:
+except AttributeError:  # pragma: no cover
     pass
 
 

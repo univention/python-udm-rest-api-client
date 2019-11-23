@@ -18,29 +18,27 @@
 # relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
 #
+import inspect
 import os
 import sys
 from pathlib import Path
 
+try:
+    from pip import main as pip_main
+except ImportError:
+    from pip._internal import main as pip_main
+if not inspect.isfunction(pip_main):
+    pip_main = pip_main.main
 
 sys.path.insert(0, os.path.abspath(".."))
-
-# get version information without importing project
-proj_path = Path(__file__).parent.parent
-sys.path.append(str(proj_path / "udm_rest_client"))
-from version import __version__
 
 # install 'openapi_client_udm' package from test-pypi to be able to build
 # Python module doc
 try:
-    import openapi_client_udm
+    import openapi_client_udm  # isort:skip
 except ImportError:
     print("Installing 'openapi_client_udm' package from test-pypi...")
-    try:
-        from pip import main as pip_main
-    except ImportError:
-        from pip._internal import main as pip_main
-    pip_main.main(
+    pip_main(
         [
             "install",
             "--compile",
@@ -50,6 +48,8 @@ except ImportError:
             "openapi-client-udm",
         ]
     )
+
+from udm_rest_client import __version__  # isort:skip
 
 # -- General configuration ---------------------------------------------
 
