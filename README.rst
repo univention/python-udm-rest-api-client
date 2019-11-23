@@ -93,6 +93,9 @@ Don't forget to update the OpenAPI client library before running the test agains
 
     $ update_openapi_client --generator <docker|java> $UCS_HOST
 
+To get the IP address of the UCS Docker container run::
+
+    $ docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' udm_rest_only
 
 Logging
 -------

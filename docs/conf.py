@@ -22,17 +22,40 @@ import os
 import sys
 from pathlib import Path
 
+from version import __version__
+
 sys.path.insert(0, os.path.abspath(".."))
+
+# get version information without importing project
 proj_path = Path(__file__).parent.parent
 sys.path.append(str(proj_path / "udm_rest_client"))
 print(sys.path)
-from version import __version__
+# install 'openapi_client_udm' package from test-pypi to be able to build
+# Python module doc
+try:
+    import openapi_client_udm
+except ImportError:
+    print("Installing 'openapi_client_udm' package from test-pypi...")
+    try:
+        from pip import main as pip_main
+    except ImportError:
+        from pip._internal import main as pip_main
+    pip_main.main(
+        [
+            "install",
+            "--compile",
+            "--upgrade",
+            "--index-url",
+            "https://test.pypi.org/simple/",
+            "openapi-client-udm",
+        ]
+    )
 
 # -- General configuration ---------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '1.3'  # autodoc_mock_imports >=1.3
+# needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -81,8 +104,6 @@ pygments_style = "sphinx"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
-
-autodoc_mock_imports = ["openapi_client_udm"]
 
 # -- Options for HTML output -------------------------------------------
 

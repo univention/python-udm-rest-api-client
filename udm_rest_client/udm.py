@@ -69,7 +69,10 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 # that code doesn't work when something goes wrong:
-del openapi_client_udm.rest.RESTClientObject.__del__
+try:
+    del openapi_client_udm.rest.RESTClientObject.__del__
+except AttributeError:
+    pass
 
 
 class UDM:
