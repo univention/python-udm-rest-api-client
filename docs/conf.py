@@ -22,14 +22,14 @@ import os
 import sys
 from pathlib import Path
 
-from version import __version__
 
 sys.path.insert(0, os.path.abspath(".."))
 
 # get version information without importing project
 proj_path = Path(__file__).parent.parent
 sys.path.append(str(proj_path / "udm_rest_client"))
-print(sys.path)
+from version import __version__
+
 # install 'openapi_client_udm' package from test-pypi to be able to build
 # Python module doc
 try:
