@@ -8,6 +8,7 @@ library.
 
 import asyncio
 import functools
+import inspect
 import os
 import subprocess
 import sys
@@ -23,6 +24,8 @@ try:
     from pip import main as pip_main
 except ImportError:
     from pip._internal import main as pip_main
+if not inspect.isfunction(pip_main):
+    pip_main = pip_main.main
 
 
 DOCKER_IMAGE = "openapitools/openapi-generator-cli:latest"
@@ -113,7 +116,9 @@ def download_jar(target_path: Path):
         print_error_and_exit(str(exc))
 
 
-def run_openapi_generator_local_java(target_dir: str, quiet: bool, jar_path: Path = None):
+def run_openapi_generator_local_java(
+    target_dir: str, quiet: bool, jar_path: Path = None
+):
     if not jar_path:
         jar_path = Path(target_dir, "openapi-generator.jar")
         download_jar(jar_path)
@@ -197,7 +202,9 @@ async def update_openapi_client(
     if not host:
         print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
     if jar and generator != "java":
-        print_error_and_exit("The --jar option can only be used together with '--generator java'.")
+        print_error_and_exit(
+            "The --jar option can only be used together with '--generator java'."
+        )
     txt = get_openapi_schema(host, secure)
     with TemporaryDirectory() as temp_dir, open(
         Path(temp_dir, TARGET_SCHEMA_FILENAME), "w"
@@ -214,9 +221,7 @@ async def update_openapi_client(
         else:
             run_openapi_generator_local_java(temp_dir, quiet, Path(jar))
         click.echo("Installing package via pip...")
-        pip_main.main(
-            ["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))]
-        )
+        pip_main(["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))])
 
 
 if __name__ == "__main__":

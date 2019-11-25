@@ -2,7 +2,7 @@
 Python UDM REST Client
 ======================
 
-|python| |license| |code style| |codecov| |docspassing|
+|python| |license| |code style| |codecov| |docspassing| |travisci|
 
 Python library to interact with the Univention `UDM REST API`_, implements the interface of the `Python UDM API`_.
 
@@ -132,3 +132,5 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 .. |docspassing| image:: https://readthedocs.org/projects/udm-rest-client/badge/?version=latest
     :alt: Documentation Status
     :target: https://udm-rest-client.readthedocs.io/en/latest/?badge=latest
+.. |travisci| image:: https://travis-ci.com/univention/python-udm-rest-api-client.svg?branch=master
+    :target: https://travis-ci.com/univention/python-udm-rest-api-client

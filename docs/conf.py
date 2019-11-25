@@ -21,7 +21,6 @@
 import inspect
 import os
 import sys
-from pathlib import Path
 
 try:
     from pip import main as pip_main
