@@ -195,9 +195,14 @@ def get_openapi_schema(host: str, secure: bool) -> str:
     default=True,
     help="Whether to print the output of the OpenAPI Generator to the screen.",
 )
+@click.option(
+    "--system/--user",
+    default=True,
+    help="Whether to install into a system or the users home directory",
+)
 @coro
 async def update_openapi_client(
-    host: str, generator: str, jar: str, keep_image: bool, secure: bool, quiet: bool
+    host: str, generator: str, jar: str, keep_image: bool, secure: bool, quiet: bool, system: bool
 ):
     if not host:
         print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
@@ -223,7 +228,20 @@ async def update_openapi_client(
         else:
             run_openapi_generator_local_java(temp_dir, quiet, jar)
         click.echo("Installing package via pip...")
-        pip_main(["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))])
+        if system:
+            pip_main(
+                ["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))]
+            )
+        else:
+            pip_main(
+                [
+                    "install",
+                    "--user",
+                    "--compile",
+                    "--upgrade",
+                    str(Path(temp_dir, "python/")),
+                ]
+            )
 
 
 if __name__ == "__main__":
