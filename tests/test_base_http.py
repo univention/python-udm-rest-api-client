@@ -469,28 +469,29 @@ async def test_move_multiple_objects(
     old_cn_dn, old_cn_obj_url, old_cn_data = new_cn(position=top_cn_dn)
     cn_name = old_cn_data["properties"]["name"]
     users = dict((num, user_created_via_http(position=old_cn_dn)) for num in range(10))
-    async with UDM(**udm_kwargs) as udm:
-        mod_user = udm.get("users/user")
-        for dn, url, data in users.values():
-            user_obj = await mod_user.get(dn)
-            assert user_obj.position == old_cn_dn
+    with patch.object(base_http, "MIN_FOLLOW_REDIRECT_SLEEP_TIME", 2.1):
+        async with UDM(**udm_kwargs) as udm:
+            mod_user = udm.get("users/user")
+            for dn, url, data in users.values():
+                user_obj = await mod_user.get(dn)
+                assert user_obj.position == old_cn_dn
 
-        mod_cn = udm.get("container/cn")
-        cn_obj = await mod_cn.get(old_cn_dn)
-        assert cn_obj.dn == old_cn_dn
-        assert cn_obj.dn != base_dn
+            mod_cn = udm.get("container/cn")
+            cn_obj = await mod_cn.get(old_cn_dn)
+            assert cn_obj.dn == old_cn_dn
+            assert cn_obj.dn != base_dn
 
-        cn_obj.position = base_dn
-        await cn_obj.save()
+            cn_obj.position = base_dn
+            await cn_obj.save()
 
-        assert cn_obj.dn == f"cn={cn_name},{base_dn}"
+            assert cn_obj.dn == f"cn={cn_name},{base_dn}"
 
-        for dn, url, data in users.values():
-            query = dn.split(",", 1)[0]
-            async for obj in mod_user.search(query):
-                assert old_cn_dn not in obj.dn
-                assert obj.position == cn_obj.dn
-                assert obj.dn == f"uid={data['properties']['username']},{cn_obj.dn}"
+            for dn, url, data in users.values():
+                query = dn.split(",", 1)[0]
+                async for obj in mod_user.search(query):
+                    assert old_cn_dn not in obj.dn
+                    assert obj.position == cn_obj.dn
+                    assert obj.dn == f"uid={data['properties']['username']},{cn_obj.dn}"
 
 
 @pytest.mark.asyncio

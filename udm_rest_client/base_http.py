@@ -92,6 +92,7 @@ METHOD_NAMES = {
     "search": "udm_{}_object_search_with_http_info",
     "update": "udm_{}_object_update_with_http_info",
 }
+MIN_FOLLOW_REDIRECT_SLEEP_TIME = 1.0
 logger = logging.getLogger(__name__)
 
 ApiModule = TypeVar("ApiModule")  # openapi_client_udm.SharesShareApi etc
@@ -862,7 +863,6 @@ class UdmObject(BaseObject):
     ) -> Dict[str, Any]:
         operation_timeout = 300  # TODO: make configurable?
         start_time = time.time()
-        sleep_time = 1.0
         while time.time() - start_time < operation_timeout:
             resp = await self._udm_module.session.session.get(
                 move_progress_url,
@@ -875,12 +875,15 @@ class UdmObject(BaseObject):
             try:
                 sleep_time = float(resp.headers["Retry-After"])
             except (KeyError, ValueError):
-                pass
+                sleep_time = MIN_FOLLOW_REDIRECT_SLEEP_TIME
+            sleep_time = min(sleep_time, MIN_FOLLOW_REDIRECT_SLEEP_TIME)
             if resp.status == 301:
                 await asyncio.sleep(sleep_time)
                 # report that we're alive, when moving takes more than 2s
                 operation_time = time.time() - start_time
-                if operation_time > 2 and int(operation_time) % 2 == 0:
+                if (
+                    operation_time > 2 and int(operation_time) % 2 == 0
+                ):  # pragma: no cover
                     logger.debug(
                         "Waiting on move operation since %.2f seconds...",
                         operation_time,
