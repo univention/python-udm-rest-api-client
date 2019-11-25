@@ -468,8 +468,8 @@ async def test_move_multiple_objects(
     top_cn_dn, top_cn_obj_url, top_cn_data = new_cn()
     old_cn_dn, old_cn_obj_url, old_cn_data = new_cn(position=top_cn_dn)
     cn_name = old_cn_data["properties"]["name"]
-    users = dict((num, user_created_via_http(position=old_cn_dn)) for num in range(10))
-    with patch.object(base_http, "MIN_FOLLOW_REDIRECT_SLEEP_TIME", 2.1):
+    users = dict((num, user_created_via_http(position=old_cn_dn)) for num in range(20))
+    with patch.object(base_http, "MIN_FOLLOW_REDIRECT_SLEEP_TIME", 3.0):
         async with UDM(**udm_kwargs) as udm:
             mod_user = udm.get("users/user")
             for dn, url, data in users.values():
