@@ -36,14 +36,6 @@ udm\_rest\_client.udm module
    :undoc-members:
    :show-inheritance:
 
-udm\_rest\_client.version module
---------------------------------
-
-.. automodule:: udm_rest_client.version
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 
 Module contents
 ---------------
