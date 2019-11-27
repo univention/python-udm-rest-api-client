@@ -442,7 +442,7 @@ def user_created_via_http(
     else:
         verify_ssl = False
 
-    def _func(**user_kwargs):
+    def _func(**user_kwargs) -> Tuple[str, str, Dict[str, Any]]:
         data = user_resource_kwargs()
         data.update(user_kwargs)
 
@@ -512,11 +512,6 @@ def delete_user_via_http(base_dn, http_headers_read, udm_kwargs):
 
 def pytest_generate_tests(metafunc):
     if "serialize_obj_data" in metafunc.fixturenames:
-        print(f"metafunc={metafunc!r}")
-        print(f"dir(metafunc)={dir(metafunc)}")
-        print(f"metafunc.__dict__={metafunc.__dict__!r}")
-        print(f"metafunc.cls={metafunc.cls!r}")
-        print(f"metafunc.definition.__dict__={metafunc.definition.__dict__!r}")
         an_int = fake.pyint()
         a_float = fake.pyfloat()
         a_date: datetime.date = fake.date_object()
@@ -569,7 +564,7 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture
 def new_cn(
     base_dn, http_headers_read, http_headers_write, udm_kwargs
-) -> Tuple[str, str, Dict[str, str]]:
+):
     """Create a new container"""
     created_cn_dns = []
     auth = (udm_kwargs["username"], udm_kwargs["password"])
@@ -579,7 +574,7 @@ def new_cn(
     else:
         verify_ssl = False
 
-    def _func(**cn_kwargs):
+    def _func(**cn_kwargs) -> Tuple[str, str, Dict[str, str]]:
         data = {"properties": {"name": fake.city()}, "position": base_dn}
         data.update(cn_kwargs)
         resp = requests.post(

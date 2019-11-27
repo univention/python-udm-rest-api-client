@@ -45,6 +45,7 @@ clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and 
 
 clean-build: ## remove build artifacts
 	rm -fr build/
+	rm -fr docs/_build/
 	rm -fr dist/
 	rm -fr .eggs/
 	rm -fr /tmp/openapilibbuild/
@@ -227,3 +228,6 @@ pip-install-openapi-client-from-test-pypi:  ## install pre-built OpenAPI client 
 		make start-docker-container; \
 		pip install --compile --upgrade --index-url https://test.pypi.org/simple/ openapi-client-udm; \
 	fi
+
+print-ucs-docker-ip: start-docker-container ## print IP address of UCS docker container (start if not running)
+	@echo `$(CONTAINER_IP_CMD)`
