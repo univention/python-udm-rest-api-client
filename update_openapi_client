@@ -123,7 +123,7 @@ def run_openapi_generator_local_java(
         jar_path = Path(target_dir, "openapi-generator.jar")
         download_jar(jar_path)
     cmd = JAVA_COMPILE_CMD.format(
-        jar=jar_path,
+        jar=str(jar_path),
         schema=str(Path(target_dir, TARGET_SCHEMA_FILENAME)),
         target_dir=target_dir,
     ).split()
@@ -205,6 +205,8 @@ async def update_openapi_client(
         print_error_and_exit(
             "The --jar option can only be used together with '--generator java'."
         )
+    if jar:
+        jar = Path(jar)
     txt = get_openapi_schema(host, secure)
     with TemporaryDirectory() as temp_dir, open(
         Path(temp_dir, TARGET_SCHEMA_FILENAME), "w"
@@ -219,7 +221,7 @@ async def update_openapi_client(
         if generator == "docker":
             run_openapi_generator_docker_container(temp_dir, quiet, keep_image)
         else:
-            run_openapi_generator_local_java(temp_dir, quiet, Path(jar))
+            run_openapi_generator_local_java(temp_dir, quiet, jar)
         click.echo("Installing package via pip...")
         pip_main(["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))])
 
