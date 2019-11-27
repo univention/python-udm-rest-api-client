@@ -67,10 +67,10 @@ Get Started!
 
 Ready to contribute? Here's how to set up `udm_rest_client` for local development.
 
-1. Fork the `udm_rest_client` repo on GitHub.
+1. Fork the `python-udm-rest-api-client` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/udm_rest_client.git
+    $ git clone git@github.com:your_name_here/python-udm-rest-api-client.git
 
 3. Install your local copy into a virtualenv::
 
