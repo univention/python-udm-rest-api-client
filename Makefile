@@ -76,13 +76,13 @@ setup_devel_env: ## setup development environment (virtualenv)
 
 format: ## format source code with the current Python interpreter
 	isort --apply --multi-line=3 --trailing-comma --force-grid-wrap=0 --combine-as --line-width 88 --recursive docs setup.py tests udm_rest_client update_openapi_client
-	black --target-version py36 setup.py docs tests udm_rest_client update_openapi_client
+	black --target-version py35 setup.py docs tests udm_rest_client update_openapi_client
 
 lint-isort:
 	isort --check-only --multi-line=3 --trailing-comma --force-grid-wrap=0 --combine-as --line-width 88 --recursive docs setup.py tests udm_rest_client update_openapi_client
 
 lint-black:
-	black --check --target-version py36 docs setup.py tests udm_rest_client update_openapi_client
+	black --check --target-version py35 docs setup.py tests udm_rest_client update_openapi_client
 
 lint-flake8:
 	flake8 --max-line-length=90 docs setup.py docs tests udm_rest_client update_openapi_client

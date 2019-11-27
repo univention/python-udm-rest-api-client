@@ -17,7 +17,9 @@ def connection_data():
         return {
             "host": faker.first_name(),
             "username": faker.first_name(),
-            "user_dn": f"uid={faker.first_name()},cn=users,dc={faker.first_name()}",
+            "user_dn": "uid={},cn=users,dc={}".format(
+                faker.first_name(), faker.first_name()
+            ),
             "password": faker.first_name(),
         }
 

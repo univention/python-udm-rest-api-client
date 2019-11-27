@@ -32,7 +32,7 @@ from __future__ import unicode_literals
 class UdmError(Exception):
     """Base class of Exceptions raised by (simplified) UDM modules."""
 
-    msg: str = ""
+    msg = ""  # type: str
 
     def __init__(self, msg: str = None, dn: str = None, module_name: str = None):
         msg = msg or self.msg
@@ -100,7 +100,7 @@ class NoObject(UdmError):
     """Raised when a UDM object could not be found at a DN."""
 
     def __init__(self, msg: str = None, dn: str = None, module_name: str = None):
-        msg = msg or f"No object found at DN {dn!r}."
+        msg = msg or "No object found at DN {!r}.".format(dn)
         super().__init__(msg, dn, module_name)
 
 
@@ -119,5 +119,10 @@ class UnknownModuleType(UdmError):
     """
 
     def __init__(self, msg: str = None, dn: str = None, module_name: str = None):
-        msg = msg or f'No or empty attribute "univentionObjectType" found at DN {dn!r}.'
+        msg = (
+            msg
+            or 'No or empty attribute "univentionObjectType" found at DN {!r}.'.format(
+                dn
+            )
+        )
         super().__init__(msg, dn, module_name)

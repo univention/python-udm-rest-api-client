@@ -111,15 +111,14 @@ class BaseObject:
         :py:meth:`BaseModule.get()`, :py:meth:`BaseModule.new()` or
         :py:meth:`BaseModule.search()`.
         """
-        self.dn: str = ""
-        self.props: BaseObjectProperties = None
-        self.options: List[
-            str
-        ] = []  # When Bug #50178 has been fixed, change 'options' to be a dict in the Python API.
-        self.policies: Dict[str, str] = {}
-        self.position: str = ""
-        self.superordinate: str = None
-        self._udm_module: BaseModule = None
+        self.dn = ""  # type: str
+        self.props = None  # type: BaseObjectProperties
+        # When Bug #50178 has been fixed, change 'options' to be a dict in the Python API.
+        self.options = []  # type: List[str]
+        self.policies = {}  # type: Dict[str, str]
+        self.position = ""  # type: str
+        self.superordinate = None  # type: str
+        self._udm_module = None  # type: BaseModule
 
     def __repr__(self) -> str:
         return "{}({!r}, {!r})".format(
@@ -165,10 +164,10 @@ class BaseModuleMetadata:
     """Whether UDM objects should be ``reload()`` 'ed after saving."""
 
     def __init__(self, meta: "BaseModule.Meta") -> None:
-        self.supported_api_versions: Iterable[int] = []
-        self.suitable_for: Iterable[str] = []
-        self.used_api_version: int = None
-        self._udm_module: BaseModule = None
+        self.supported_api_versions = []  # type: Iterable[int]
+        self.suitable_for = []  # type: Iterable[str]
+        self.used_api_version = None  # type: int
+        self._udm_module = None  # type: BaseModule
         if hasattr(meta, "supported_api_versions"):
             self.supported_api_versions = meta.supported_api_versions
         if hasattr(meta, "suitable_for"):
@@ -287,13 +286,13 @@ class BaseModule(metaclass=BaseModuleMeta):
     _udm_module_meta_class = BaseModuleMetadata
 
     class Meta:
-        supported_api_versions: Iterable[int] = ()
-        suitable_for: Iterable[str] = []
+        supported_api_versions = ()  # type: Iterable[int]
+        suitable_for = []  # type: Iterable[str]
 
     def __init__(self, name: str, connection: Any, api_version: int) -> None:
         self.connection = connection
-        self.name: str = name
-        self.meta: BaseModuleMetadata = self.meta.instance(self, api_version)
+        self.name = name  # type: str
+        self.meta = self.meta.instance(self, api_version)  # type: BaseModuleMetadata
 
     def __repr__(self) -> str:
         return "{}({!r})".format(self.__class__.__name__, self.name)

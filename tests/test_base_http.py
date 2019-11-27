@@ -52,7 +52,7 @@ async def test_dn_property_encoder_checks_module_name(random_name):
     ).decode()
     assert str(str_prop) == dn
     with pytest.raises(UnknownModuleType):
-        await str_prop.obj
+        await str_prop.obj()
 
 
 @pytest.mark.parametrize(
@@ -104,7 +104,7 @@ async def test_good_credentials(user_created_via_http, udm_kwargs):
 async def test_bad_credentials(user_created_via_http, udm_kwargs):
     dn, url, user = user_created_via_http()
     bad_kwargs = udm_kwargs.copy()
-    bad_kwargs["password"] = f"A{udm_kwargs['password']}B"
+    bad_kwargs["password"] = "A{}B".format(udm_kwargs["password"])
     async with UDM(**bad_kwargs) as udm:
         mod = udm.get("users/user")
         with pytest.raises(APICommunicationError) as exc_info:
@@ -137,7 +137,7 @@ async def test_openapi_class(udm_kwargs):
 @pytest.mark.asyncio
 async def test_udm_module_module_unknown(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
-        for name in (f"groups/{fake.pystr()}", fake.pystr()):
+        for name in ("groups/{}".format(fake.pystr()), fake.pystr()):
             with pytest.raises(UnknownModuleType):
                 udm.get(name)
 
@@ -145,7 +145,7 @@ async def test_udm_module_module_unknown(udm_kwargs):
 @pytest.mark.asyncio
 async def test_udm_openapi_class_unknown(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
-        for name in (f"groups/{fake.pystr()}", fake.pystr()):
+        for name in ("groups/{}".format(fake.pystr()), fake.pystr()):
             with pytest.raises(UnknownModuleType):
                 udm.session.openapi_class(name)
 
@@ -206,7 +206,7 @@ async def test_dn_property_encoder(random_name):
             property_name, dn, session, udm_module
         ).decode()
         assert hasattr(str_prop, "obj")
-        obj = await str_prop.obj
+        obj = await str_prop.obj()
         load_mock.assert_called_with(dn)
         assert obj == val
 
@@ -216,7 +216,7 @@ async def test_session_base_dn(base_dn, udm_kwargs):
     base_dn_via_ldap = base_dn
 
     async with UDM(**udm_kwargs) as udm:
-        base_dn_via_http = await udm.session.base_dn
+        base_dn_via_http = await udm.session.base_dn()
 
     assert base_dn_via_http == base_dn_via_ldap
 
@@ -228,10 +228,10 @@ async def test_new_user(base_dn, udm_kwargs):
         obj = await mod.new()
     assert obj.dn is None
     assert obj.uri == ""
-    assert obj.position == f"cn=users,{base_dn}"
+    assert obj.position == "cn=users,{}".format(base_dn)
     assert obj.props.firstname is None
     assert obj.props.groups == []
-    assert obj.props.primaryGroup == f"cn=Domain Users,cn=groups,{base_dn}"
+    assert obj.props.primaryGroup == "cn=Domain Users,cn=groups,{}".format(base_dn)
     assert obj.props.shell == "/bin/bash"
 
 
@@ -254,7 +254,7 @@ async def test_get_user(user_created_via_http, udm_kwargs):
 async def test_get_no_object(user_created_via_http, udm_kwargs):
     dn, url, user = user_created_via_http()
     dn_parts = dn.split(",")
-    wrong_dn = f"{dn_parts[0]}a,{','.join(dn_parts[1:])}"
+    wrong_dn = "{}a,{}".format(dn_parts[0], ",".join(dn_parts[1:]))
 
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
@@ -277,7 +277,7 @@ async def test_dn_property_encoder_user_group_obj(
         assert str(primary_group).startswith("cn=")
         assert str(primary_group).endswith(base_dn)
         assert hasattr(primary_group, "obj")
-        primary_group_obj = await primary_group.obj
+        primary_group_obj = await primary_group.obj()
         assert isinstance(primary_group_obj, base_http.UdmObject)
         assert primary_group_obj.dn == str(primary_group)
         assert dn in primary_group_obj.props.users
@@ -448,7 +448,7 @@ async def test_move_user(new_cn, user_created_via_http, udm_kwargs):
         res = await obj.save()
         assert res is obj
         assert obj.dn != old_user_dn
-        assert obj.dn == f"uid={obj.props.username},{cn_dn}"
+        assert obj.dn == "uid={},{}".format(obj.props.username, cn_dn)
         assert obj.uri != old_user_url
         from urllib.parse import unquote
 
@@ -484,14 +484,16 @@ async def test_move_multiple_objects(
             cn_obj.position = base_dn
             await cn_obj.save()
 
-            assert cn_obj.dn == f"cn={cn_name},{base_dn}"
+            assert cn_obj.dn == "cn={},{}".format(cn_name, base_dn)
 
             for dn, url, data in users.values():
                 query = dn.split(",", 1)[0]
-                async for obj in mod_user.search(query):
+                for obj in await mod_user.search(query):
                     assert old_cn_dn not in obj.dn
                     assert obj.position == cn_obj.dn
-                    assert obj.dn == f"uid={data['properties']['username']},{cn_obj.dn}"
+                    assert obj.dn == "uid={},{}".format(
+                        data["properties"]["username"], cn_obj.dn
+                    )
 
 
 @pytest.mark.asyncio
@@ -502,7 +504,7 @@ async def test_move_error(base_dn, random_name, user_created_via_http, udm_kwarg
         obj = await mod.get(old_user_dn)
         assert obj.dn == old_user_dn
         assert obj.uri == old_user_url
-        obj.position = f"cn={random_name},{base_dn}"
+        obj.position = "cn={},{}".format(random_name, base_dn)
         with pytest.raises(MoveError):
             await obj.save()
 
@@ -620,7 +622,7 @@ async def test_search_existing_user(user_created_via_http, udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
         query = dn.split(",", 1)[0]
-        async for obj in mod.search(query):
+        for obj in await mod.search(query):
             assert obj.dn == dn
             assert obj.uri == url
             assert obj.position == data["position"]
@@ -634,8 +636,11 @@ async def test_search_at_dn(user_created_via_http, udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
         with pytest.raises(ValueError):
-            [_ async for _ in mod.search(base=dn, scope=fake.pystr())]
-        async for obj in mod.search(base=dn, scope="base"):
+            for _ in await mod.search(base=dn, scope=fake.pystr()):
+                assert (
+                    False
+                ), "We should not be here, search result should be empty."  # pragma: no cover
+        for obj in await mod.search(base=dn, scope="base"):
             assert obj.dn == dn
             assert obj.uri == url
             assert obj.position == user["position"]
@@ -647,8 +652,11 @@ async def test_search_at_dn(user_created_via_http, udm_kwargs):
 async def test_search_not_existing_user(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
-        query = f"uid={fake.user_name()}"
-        assert [obj async for obj in mod.search(query)] == []
+        query = "uid={}".format(fake.user_name())
+        for _ in await mod.search(query):
+            assert (
+                False
+            ), "We should not be here, search result should be empty."  # pragma: no cover
 
 
 @pytest.mark.asyncio
@@ -665,7 +673,7 @@ async def test_search_all_users(base_dn, ldap_connection, udm_kwargs):
     dns_via_udm_http = set()
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
-        async for obj in mod.search():
+        for obj in await mod.search():
             dns_via_udm_http.add(obj.dn)
 
     assert any(dn.startswith("uid=Administrator") for dn in dns_via_udm_http)
@@ -685,13 +693,13 @@ async def test_object_repr(udm_kwargs):
         mod_name = "users/user"
         mod = udm.get(mod_name)
         mod_repr = repr(mod)
-        assert mod_repr == f"UdmModule({mod_name!r})"
+        assert mod_repr == "UdmModule({!r})".format(mod_name)
         meta_repr = repr(mod.meta)
         assert meta_repr.startswith("UdmModuleMetadata(")
         assert "supported_api_versions" in meta_repr
-        async for obj in mod.search():
+        for obj in await mod.search():
             obj_repr = repr(obj)
-            assert obj_repr == f"UdmObject({mod_name!r}, {obj.dn!r})"
+            assert obj_repr == "UdmObject({!r}, {!r})".format(mod_name, obj.dn)
             props_repr = repr(obj.props)
             assert props_repr.startswith("UdmObjectProperties(")
             assert "username" in props_repr
@@ -752,12 +760,12 @@ def test_session_openapi_model():
     session = UDM("A", "B", "C").session
     assert session.openapi_model("users/user").__name__ == "UsersUser"
     with pytest.raises(UnknownModuleType):
-        session.openapi_model(f"{fake.pystr()}/{fake.pystr()}")
+        session.openapi_model("{}/{}".format(fake.pystr(), fake.pystr()))
 
 
 @pytest.mark.asyncio
 async def test_udm_obj_by_dn_no_univention_type(udm_kwargs, base_dn):
-    dn = f"cn=backup,{base_dn}"
+    dn = "cn=backup,{}".format(base_dn)
     async with UDM(**udm_kwargs) as udm:
         with pytest.raises(NoObject):
             await udm.obj_by_dn(dn)
@@ -778,7 +786,7 @@ async def test_udm_obj_by_dn_good_dn(udm_kwargs, user_created_via_http):
 @pytest.mark.asyncio
 async def test_session_get_json_bad_url(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
-        url = f"{udm_kwargs['url']}/{fake.user_name()}/{fake.user_name()}"
+        url = "{}/{}/{}".format(udm_kwargs["url"], fake.user_name(), fake.user_name())
         with pytest.raises(NoObject):
             await udm.session.get_json(url, ssl=False)
 
@@ -787,7 +795,7 @@ async def test_session_get_json_bad_url(udm_kwargs):
 async def test_bad_module_name(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         with pytest.raises(UnknownModuleType):
-            await udm.get(f"{fake.pystr()}")
+            await udm.get("{}".format(fake.pystr()))
 
 
 @pytest.mark.asyncio
@@ -817,7 +825,7 @@ async def test_modify_users_self_redirects_to_users_user(
         assert obj._udm_module.name == "users/user"
 
         obj._udm_module = mod
-        new_fn = f"Admin {random_name()}"
+        new_fn = "Admin {}".format(random_name())
         obj.props.firstname = new_fn
         res = await obj.save()
         assert res is obj

@@ -17,7 +17,7 @@ Features
 * Automatic handling of HTTP(S) sessions
 * Type annotations
 * 100% test coverage (unittests + integration tests)
-* Python 3.6, 3.7, 3.8
+* Python 3.5, 3.6, 3.7, 3.8
 
 
 Usage
@@ -47,6 +47,14 @@ The ``UDM`` context manager opens and closes a HTTP session::
 There are more examples in the `docs`_ `usage` section.
 
 If the SSL CA certificate is not available ``verify_ssl=False`` can be used in place of ``ssl_ca_cert=...``. Obviously that is not safe! The CA of any UCS server can always be downloaded from ``http://FQDN.OF.UCS/ucs-root-ca.crt``.
+
+**Attention**: the ``search()`` method in this branch behaves differently.
+In Python 3.5 ``search()`` is not an async generator, but a regular awaitable that returns a list::
+
+    for obj in await mod_user.search(query):  # Python 3.5
+        ...
+    async for obj in mod_user.search(query):  # Python 3.6+
+        ...
 
 
 Installation

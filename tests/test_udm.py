@@ -88,7 +88,7 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
         )
         with open("/tmp/objs", "a") as fp:
             for obj in objs:
-                fp.write(f"{obj!r}\n")
+                fp.write("{!r}\n".format(obj))
         # TODO: what's this? all None!
 
 

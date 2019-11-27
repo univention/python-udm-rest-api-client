@@ -41,11 +41,10 @@ import re
 import time
 import warnings
 from functools import lru_cache
-from typing import Any, AsyncIterator, Dict, List, Pattern, Tuple, TypeVar, Union, cast
+from typing import Any, Dict, Iterable, List, Pattern, Tuple, TypeVar, Union, cast
 from urllib.parse import SplitResult, unquote, urljoin, urlsplit
 
 import aiohttp
-from async_property import async_cached_property, async_property
 
 from .base import (
     BaseModule,
@@ -142,7 +141,7 @@ def _serialize_obj(obj: Any) -> Any:
         return [_serialize_obj(v) for v in obj]
     if _is_api_model(type(obj)):
         return _serialize_obj(obj.to_dict())
-    raise ValueError(f"Dont know how to handle object of type {type(obj)!r}.")
+    raise ValueError("Dont know how to handle object of type {!r}.".format(type(obj)))
 
 
 def _uri2module_dn(uri):  # type: (str) -> Tuple[str, str]
@@ -175,7 +174,8 @@ def _uri2module_dn(uri):  # type: (str) -> Tuple[str, str]
 
 def _camel_case_name(udm_module_name: str) -> str:
     cc_name = "".join(
-        f"{s[0].upper()}{s[1:]}" for s in udm_module_name.strip("/_").split("/")
+        "{}{}".format(s[0].upper(), s[1:])
+        for s in udm_module_name.strip("/_").split("/")
     )
     while "_" in cc_name:
         index = cc_name.find("_")
@@ -195,7 +195,7 @@ class Session:
         password: str,
         url: str,
         max_client_tasks: int = 10,
-        **kwargs,
+        **kwargs
     ):
         """
         Use the provided data to connect to the UDM REST API. Pass an instance
@@ -240,18 +240,18 @@ class Session:
         connection_pool_maxsize = kwargs.get("connection_pool_maxsize", 100)
         if connection_pool_maxsize < max_client_tasks:
             txt = (
-                f"Raising 'connection_pool_maxsize' to value of "
-                f"'max_client_tasks' ({max_client_tasks})."
+                "Raising 'connection_pool_maxsize' to value of "
+                "'max_client_tasks' ({}).".format(max_client_tasks)
             )
             warnings.warn(txt, BadSettingsWarning)
             logger.warning(txt)
             connection_pool_maxsize = max_client_tasks
             kwargs["connection_pool_maxsize"] = connection_pool_maxsize
-        _url: SplitResult = urlsplit(url)
+        _url = urlsplit(url)  # type: SplitResult
         if _url.scheme == "http":
             txt = (
-                f"Using unencrypted connection. The password of the user "
-                f"{username!r} will be visible on the network!"
+                "Using unencrypted connection. The password of the user "
+                "{!r} will be visible on the network!".format(username)
             )
             warnings.warn(txt, InsecureRequestWarning)
             logger.warning(txt)
@@ -276,13 +276,13 @@ class Session:
         for k, v in kwargs.items():
             if not hasattr(self.openapi_client_config, k):
                 raise ConfigurationError(
-                    f"Unknown attribute {k!r} for an "
-                    f"'openapi_client_udm.Configuration' object."
+                    "Unknown attribute {!r} for an "
+                    "'openapi_client_udm.Configuration' object.".format(k)
                 )
             setattr(self.openapi_client_config, k, v)
             self.kwargs[k] = v
-        self._client: openapi_client_udm.ApiClient = None
-        self._session: aiohttp.ClientSession = None
+        self._client = None  # type: openapi_client_udm.ApiClient
+        self._session = None  # type: aiohttp.ClientSession
         self._client_task_limiter = asyncio.Semaphore(max_client_tasks)
 
     def open(self) -> None:
@@ -323,8 +323,8 @@ class Session:
                     return await response.json()
                 elif 400 <= response.status <= 499:
                     raise NoObject(
-                        f"UDM REST API returned status {response.status}, "
-                        "reason {response.reason!r} for URL {url!r}.",
+                        "UDM REST API returned status {}, reason {!r} for URL "
+                        "{!r}.".format(response.status, response.reason, url),
                         dn=url,
                         module_name="<unknown>",
                     )
@@ -335,24 +335,24 @@ class Session:
 
     async def get_object_type(self, dn: str) -> str:
         dn = dn.replace("//", ",/=/,")
-        url = urljoin(self.openapi_client_config.host + "/", f"object/{dn}")
+        url = urljoin(self.openapi_client_config.host + "/", "object/{}".format(dn))
         body = await self.get_json(url, allow_redirects=True)
         try:
             return body["objectType"]
         except KeyError as exc:  # pragma: no cover
             raise UnknownModuleType(
-                f"Received object from UDM REST API without or with unknown "
-                f"'objectType' attribute at URL {url!r}. Complete body: {body!r}",
+                "Received object from UDM REST API without or with unknown "
+                "'objectType' attribute at URL {!r}. Complete body: {!r}".format(
+                    url, body
+                ),
                 dn=dn,
                 module_name="n/a",
             ) from exc
 
-    @async_cached_property
     async def dn_regex(self) -> Pattern:
-        base_dn = await self.base_dn
+        base_dn = await self.base_dn()
         return re.compile(r"^(\w+=.+)+,{}$".format(re.escape(base_dn)))
 
-    @async_cached_property
     async def base_dn(self) -> str:
         url = urljoin(self.openapi_client_config.host + "/", "ldap/base/")
         body = await self.get_json(url)
@@ -361,10 +361,11 @@ class Session:
     def openapi_class(self, udm_module_name: str) -> type:
         camel_case_name = _camel_case_name(udm_module_name)
         try:
-            return getattr(openapi_client_udm, f"{camel_case_name}Api")
+            return getattr(openapi_client_udm, "{}Api".format(camel_case_name))
         except AttributeError:
             raise UnknownModuleType(
-                f"Unknown module: {udm_module_name!r}.", module_name=udm_module_name,
+                "Unknown module: {!r}.".format(udm_module_name),
+                module_name=udm_module_name,
             )
 
     def openapi_model(self, udm_module_name: str) -> ApiModel:
@@ -373,7 +374,8 @@ class Session:
             return getattr(openapi_client_udm, camel_case_name)
         except AttributeError:
             raise UnknownModuleType(
-                f"Unknown module: {udm_module_name!r}.", module_name=udm_module_name,
+                "Unknown module: {!r}.".format(udm_module_name),
+                module_name=udm_module_name,
             )
 
     @lru_cache(maxsize=256)
@@ -381,12 +383,14 @@ class Session:
         name_snake_case = "_".join(s.lower() for s in udm_module_name.split("/"))
         meth_name = METHOD_NAMES[operation].format(name_snake_case)
         api_cls = self.openapi_class(udm_module_name)
-        api: ApiModule = api_cls(self._client)
+        api = api_cls(self._client)  # type: ApiModule
         try:
             return getattr(api, meth_name)
         except AttributeError:
             raise MethodNotSupportedError(
-                f"Unsupported method {meth_name!r} for module {udm_module_name!r}.",
+                "Unsupported method {!r} for module {!r}.".format(
+                    meth_name, udm_module_name
+                ),
                 module_name=udm_module_name,
             )
 
@@ -396,7 +400,7 @@ class Session:
         operation: str,
         dn: str = None,
         api_model_obj: Union[ApiModel, Dict[str, Any]] = None,
-        **kwargs,
+        **kwargs
     ) -> Tuple[Union[ApiModel, List[ApiModel]], int, Dict[str, str]]:
         meth = self.openapi_method(udm_module_name, operation)
         if api_model_obj:
@@ -450,16 +454,17 @@ class Session:
             except ApiException as exc:
                 if exc.status == 401:
                     raise APICommunicationError(
-                        f"[HTTP 401] Credentials invalid or no permissions for "
-                        f"operation {operation!r} on {udm_module_name!r} with "
-                        f"arguments {kwargs!r}.",
+                        "[HTTP 401] Credentials invalid or no permissions for "
+                        "operation {!r} on {!r} with arguments {!r}.".format(
+                            operation, udm_module_name, kwargs
+                        ),
                         status=exc.status,
                         reason=exc.reason,
                     ) from exc
                 if exc.status == 404:
                     raise NoObject(
-                        f"[HTTP 404] No {udm_module_name!r} object found for "
-                        f"arguments {kwargs!r}.",
+                        "[HTTP 404] No {!r} object found for arguments "
+                        "{!r}.".format(udm_module_name, kwargs),
                         dn=kwargs.get("dn"),
                         module_name=udm_module_name,
                     ) from exc
@@ -481,7 +486,7 @@ class Session:
                 if exc.body:
                     try:
                         resp_obj = json.loads(exc.body)
-                        reason = f"{reason}: {resp_obj['error']['error']}"
+                        reason = "{}: {}".format(reason, resp_obj["error"]["error"])
                     except (KeyError, ValueError):  # pragma: no cover
                         pass
                 if exc.status == 422 and operation == "create":
@@ -489,8 +494,10 @@ class Session:
                 if exc.status == 422 and operation == "update":
                     raise ModifyError(reason) from exc
                 raise APICommunicationError(
-                    f"[HTTP {exc.status}]: for operation {operation!r} on "
-                    f"{udm_module_name!r} with arguments {kwargs!r}: {reason}",
+                    "[HTTP {}]: for operation {!r} on {!r} with arguments {!r}:"
+                    " {}".format(
+                        exc.status, operation, udm_module_name, kwargs, reason
+                    ),
                     reason=reason,
                     status=exc.status,
                 ) from exc  # pragma: no cover
@@ -551,7 +558,7 @@ class UdmObject(BaseObject):
         super(UdmObject, self).__init__()
         self.uri = ""
         self.uuid = ""
-        self._api_obj: ApiModel = None
+        self._api_obj = None  # type: ApiModel
         self._fresh = True
         self._deleted = False
         self._udm_module = cast(UdmModule, self._udm_module)
@@ -583,7 +590,7 @@ class UdmObject(BaseObject):
         """
         if self._deleted:
             raise DeletedError(
-                f"{self} has been deleted.",
+                "{} has been deleted.".format(self),
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )
@@ -607,7 +614,7 @@ class UdmObject(BaseObject):
         """
         if self._deleted:
             raise DeletedError(
-                f"{self} has been deleted.",
+                "{} has been deleted.".format(self),
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )
@@ -696,9 +703,11 @@ class UdmObject(BaseObject):
         else:  # pragma: no cover
             # TODO: wrap in {Create/Modify/Move/Delete}Exception
             raise ApiException(
-                f"UDM REST API returned status {status}, header: {header!r} "
-                f"for {operation!r} of {self._udm_module.name!r} {dn!r}."
-            )
+                "UDM REST API returned status {}, header: {!r} for {!r} of "
+                "{!r} {!r}.".format(
+                    status, header, operation, self._udm_module.name, dn
+                )
+            )  # pragma: no cover
         self._fresh = False
         await self.reload()
         return self
@@ -770,7 +779,7 @@ class UdmObject(BaseObject):
         )
 
         self.props = self.udm_prop_class(self)
-        dn_regex = await self._udm_module.session.dn_regex
+        dn_regex = await self._udm_module.session.dn_regex()
         for k, v in api_model_obj.properties.items():
             if isinstance(v, str) and v and dn_regex.match(v):
                 v = DnPropertyEncoder(k, v, self._udm_module.session).decode()
@@ -785,7 +794,7 @@ class UdmObject(BaseObject):
                     for dn in v
                 ]
             setattr(self.props, k, v)
-        superordinate: str = getattr(api_model_obj, "superordinate", None)
+        superordinate = getattr(api_model_obj, "superordinate", None)  # type: str
         if (
             superordinate
             and isinstance(superordinate, str)  # noqa: 503
@@ -828,12 +837,15 @@ class UdmObject(BaseObject):
             )
         except APICommunicationError as exc:
             raise MoveError(
-                f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}"
+                "Error moving {} to {!r}: [{}] {}".format(
+                    self, position, exc.status, exc.reason
+                )
             )
         if status != 201:  # pragma: no cover
             raise MoveError(
-                f"Error moving {self} to {position!r}:\nHTTP [{status}]\n"
-                f"response: {new_api_obj!r}\nheader: {header!r}'",
+                "Error moving {} to {!r}:\nHTTP [{}]\nresponse: {!r}\nheader: {!r}'".format(
+                    self, position, status, new_api_obj, header
+                ),
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )
@@ -902,13 +914,15 @@ class UdmObject(BaseObject):
                 )
                 break
             raise ApiException(
-                f"UDM REST API returned status {resp.status}, headers: {resp.headers!r} "
-                f"for move of {self} to position {position!r}."
+                "UDM REST API returned status {}, headers: {!r} for move of {} to position {!r}.".format(
+                    resp.status, resp.headers, self, position
+                )
             )  # pragma: no cover
         else:
             raise MoveError(
-                f"Moving {self} to {position!r} did not complete in "
-                f"{operation_timeout} seconds.",
+                "Moving {} to {!r} did not complete in {} seconds.".format(
+                    self, position, operation_timeout
+                ),
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )  # pragma: no cover
@@ -996,7 +1010,7 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
 
     _udm_object_class = UdmObject
     _udm_module_meta_class = UdmModuleMetadata
-    _new_object_templates: Dict[str, UdmObject] = {}
+    _new_object_templates = {}  # type: Dict[str, UdmObject]
 
     class Meta:
         """
@@ -1018,9 +1032,11 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         """
         super(UdmModule, self).__init__(name, session, 1)
         camel_case_name = _camel_case_name(name)
-        if not hasattr(openapi_client_udm, f"{camel_case_name}Api"):
-            raise UnknownModuleType(f"Unknown module: {name!r}.", module_name=name)
-        self.session: Session = cast(Session, self.connection)
+        if not hasattr(openapi_client_udm, "{}Api".format(camel_case_name)):
+            raise UnknownModuleType(
+                "Unknown module: {!r}.".format(name), module_name=name
+            )
+        self.session = cast(Session, self.connection)  # type: Session
         self.session.openapi_class(
             name
         )  # noqa # side effect: check that UDM module `name` exists
@@ -1059,7 +1075,7 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
 
     async def search(
         self, filter_s: str = "", base: str = "", scope: str = "sub"
-    ) -> AsyncIterator[UdmObject]:
+    ) -> Iterable[UdmObject]:
         """
         Get all UDM objects from LDAP that match the given filter.
 
@@ -1085,8 +1101,10 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         api_model_objs, _, _ = await self.session.call_openapi(
             self.name, "search", **params
         )
+        res = []
         for obj in api_model_objs:
-            yield await self._load_udm_object(api_obj=obj)
+            res.append(await self._load_udm_object(api_obj=obj))
+        return res
 
     async def _get_api_object(self, dn: str) -> ApiModel:
         """
@@ -1152,15 +1170,14 @@ class DnPropertyEncoder:
         A string with an additional member variable.
         """
 
-        _property_name: str
-        _dn: str
-        _session: Session
-        _udm_module_name: str
+        _property_name = ""  # type: str
+        _dn = ""  # type: str
+        _session = None  # type: Session
+        _udm_module_name = ""  # type: str
 
         def __deepcopy__(self, memodict=None) -> str:
             return str(self)
 
-        @async_property
         async def obj(self) -> UdmObject:
             udm_module_name = (
                 self._udm_module_name or await self._session.get_object_type(self._dn)

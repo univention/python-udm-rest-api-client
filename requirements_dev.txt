@@ -1,4 +1,4 @@
-black
+# black  # >= py3.6, may be used from .tox/black/bin/black
 bumpversion
 coverage
 flake8

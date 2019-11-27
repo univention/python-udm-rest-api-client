@@ -32,11 +32,15 @@ DOCKER_IMAGE = "openapitools/openapi-generator-cli:latest"
 JAR_URL = "http://central.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.0/openapi-generator-cli-4.2.0.jar"
 TARGET_PYTHON_PACKAGE_NAME = "openapi_client_udm"
 TARGET_SCHEMA_FILENAME = "udm_openapi.json"
-OPENAPI_GENERATE_COMMAND_COMMON = (
-    f"generate -g python --library asyncio --package-name {TARGET_PYTHON_PACKAGE_NAME}"
+OPENAPI_GENERATE_COMMAND_COMMON = "generate -g python --library asyncio --package-name {}".format(
+    TARGET_PYTHON_PACKAGE_NAME
 )
-DOCKER_RUN_COMMAND = f"{OPENAPI_GENERATE_COMMAND_COMMON} -i /local/{TARGET_SCHEMA_FILENAME} -o /local/python"
-JAVA_COMPILE_CMD = f"java -jar {{jar}} {OPENAPI_GENERATE_COMMAND_COMMON} -i {{schema}} -o {{target_dir}}/python"
+DOCKER_RUN_COMMAND = "{} -i /local/{} -o /local/python".format(
+    OPENAPI_GENERATE_COMMAND_COMMON, TARGET_SCHEMA_FILENAME
+)
+JAVA_COMPILE_CMD = "java -jar {{jar}} {} -i {{schema}} -o {{target_dir}}/python".format(
+    OPENAPI_GENERATE_COMMAND_COMMON
+)
 OPENAPI_SCHEMA_URL = "https://{host}/univention/udm/openapi.json"
 
 
@@ -80,10 +84,12 @@ def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
             )
         )
     except requests.ConnectionError as exc:
-        print_error_and_exit(f"Connecting to the Docker daemon: {exc!s}")
-    click.echo(f"Downloading/updating Docker image {DOCKER_IMAGE!r} (~130 MiB)...")
+        print_error_and_exit("Connecting to the Docker daemon: {!s}".format(exc))
+    click.echo(
+        "Downloading/updating Docker image {!r} (~130 MiB)...".format(DOCKER_IMAGE)
+    )
     docker_client.images.pull(DOCKER_IMAGE)
-    click.echo(f"Starting Docker container and generating Python code...")
+    click.echo("Starting Docker container and generating Python code...")
     docker_log = docker_client.containers.run(
         image=DOCKER_IMAGE,
         command=DOCKER_RUN_COMMAND,
@@ -94,24 +100,26 @@ def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
     if not quiet:
         click.echo(docker_log)
     if keep_image:
-        click.echo(f"Keeping Docker image {DOCKER_IMAGE}.")
+        click.echo("Keeping Docker image {}.".format(DOCKER_IMAGE))
     else:
-        click.echo(f"Removing Docker image {DOCKER_IMAGE}...")
+        click.echo("Removing Docker image {}...".format(DOCKER_IMAGE))
         docker_client.images.remove(DOCKER_IMAGE)
 
 
 def download_jar(target_path: Path):
-    click.echo(f"Downloading OpenAPI generator JAR (~19 MiB)...")
+    click.echo("Downloading OpenAPI generator JAR (~19 MiB)...")
     try:
         with requests.get(JAR_URL, stream=True) as resp, target_path.open("wb") as fp:
             if resp.status_code != 200:
                 print_error_and_exit(
-                    f"Error downloading OpenAPI generator JAR from {JAR_URL!r}: [{resp.status_code}] {resp.reason}"
+                    "Error downloading OpenAPI generator JAR from {!r}: [{}] {}".format(
+                        JAR_URL, resp.status_code, resp.reason
+                    )
                 )
             for chunk in resp.iter_content(chunk_size=8192):
                 if chunk:
                     fp.write(chunk)
-            click.echo(f"Downloaded {fp.tell() / 1024:.1f} KiB.")
+            click.echo("Downloaded {:.1f} KiB.".format(fp.tell() / 1024))
     except requests.ConnectionError as exc:
         print_error_and_exit(str(exc))
 
@@ -127,7 +135,7 @@ def run_openapi_generator_local_java(
         schema=str(Path(target_dir, TARGET_SCHEMA_FILENAME)),
         target_dir=target_dir,
     ).split()
-    click.echo(f"Starting to generate Python code...")
+    click.echo("Starting to generate Python code...")
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = process.communicate()
     if process.returncode:
@@ -139,7 +147,7 @@ def run_openapi_generator_local_java(
 def get_openapi_schema(host: str, secure: bool) -> str:
     url = OPENAPI_SCHEMA_URL.format(host=host)
 
-    click.echo(f"Downloading OpenAPI schema from {url!r}...")
+    click.echo("Downloading OpenAPI schema from {!r}...".format(url))
 
     request_kwargs = {}
     if not secure:
@@ -152,10 +160,12 @@ def get_openapi_schema(host: str, secure: bool) -> str:
         print_error_and_exit(str(exc))
     if resp.status_code != 200:
         print_error_and_exit(
-            f"Error downloading OpenAPI schema from {url!r}: [{resp.status_code}] {resp.reason}"
+            "Error downloading OpenAPI schema from {!r}: [{}] {}".format(
+                url, resp.status_code, resp.reason
+            )
         )
     txt = resp.text
-    click.echo(f"Downloaded {len(txt)/1024:.1f} KiB.")
+    click.echo("Downloaded {:.1f} KiB.".format(len(txt) / 1024))
     return txt
 
 
@@ -209,14 +219,15 @@ async def update_openapi_client(
         jar = Path(jar)
     txt = get_openapi_schema(host, secure)
     with TemporaryDirectory() as temp_dir, open(
-        Path(temp_dir, TARGET_SCHEMA_FILENAME), "w"
+        str(Path(temp_dir, TARGET_SCHEMA_FILENAME)), "w"
     ) as temp_file_fp:
         temp_file_fp.write(txt)
         temp_file_fp.flush()
 
         click.echo(
-            f"Generating OpenAPI client library {TARGET_PYTHON_PACKAGE_NAME!r}"
-            f" using {generator!r} mechanism..."
+            "Generating OpenAPI client library {!r} using {!r} mechanism...".format(
+                TARGET_PYTHON_PACKAGE_NAME, generator
+            )
         )
         if generator == "docker":
             run_openapi_generator_docker_container(temp_dir, quiet, keep_image)

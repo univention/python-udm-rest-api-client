@@ -96,7 +96,7 @@ class UDM:
         password: str,
         url: str,
         max_client_tasks: int = 10,
-        **kwargs,
+        **kwargs
     ):
         """
         Use the provided data to connect to the UDM REST API. Additional
@@ -213,5 +213,5 @@ class UDM:
         return [
             name
             for name in await self.modules_list()
-            if not hasattr(openapi_client_udm, f"{_camel_case_name(name)}Api")
+            if not hasattr(openapi_client_udm, "{}Api".format(_camel_case_name(name)))
         ]

@@ -40,7 +40,7 @@ UDMServer = namedtuple("UDMServer", ["host", "username", "user_dn", "password"])
 fake = faker.Faker()
 logger = logging.getLogger(__name__)
 UCS_LDAP_PORT = 7389
-ca_cert_path: Path = None
+ca_cert_path = None  # type: Optional[Path]
 
 
 # suppress "InsecureRequestWarning: Unverified HTTPS request is being made."
@@ -68,7 +68,9 @@ def running_test_container() -> UDMServer:
     container = docker_client.containers.get(TEST_DOCKER_CONTAINER_NAME)
     if container.status != "running":  # pragma: no cover
         print(
-            f"Found stopped Docker container {TEST_DOCKER_CONTAINER_NAME!r}. Trying to start and continue."
+            "Found stopped Docker container {!r}. Trying to start and continue.".format(
+                TEST_DOCKER_CONTAINER_NAME
+            )
         )  # pragma: no cover
         container.start()
     for k, v in container.attrs["NetworkSettings"]["Networks"].items():
@@ -79,13 +81,15 @@ def running_test_container() -> UDMServer:
                 user_dn="uid=Administrator,cn=users,dc=ucs-test,dc=intranet",
                 password="univention",
             )
-            print(f"Using Docker container '{TEST_DOCKER_CONTAINER_NAME!r}'.")
+            print("Using Docker container '{!r}'.".format(TEST_DOCKER_CONTAINER_NAME))
             return server
         except KeyError:  # pragma: no cover
             pass
     else:  # pragma: no cover
         raise ContainerIpUnknown(
-            f"Could not get IP address from container {TEST_DOCKER_CONTAINER_NAME!r}."
+            "Could not get IP address from container {!r}.".format(
+                TEST_DOCKER_CONTAINER_NAME
+            )
         )
 
 
@@ -96,7 +100,7 @@ def load_test_server_yaml():
         :raises: FileNotFoundError
         :raises: TypeError
         """
-        with open(path, "r") as fp:
+        with open(str(path), "r") as fp:
             config = ruamel.yaml.load(fp, ruamel.yaml.RoundTripLoader)
         return UDMServer(**config)
 
@@ -120,7 +124,7 @@ def save_test_server_yaml():
         """
         :raises: OSError (PermissionError etc)
         """
-        with open(path, "w") as fp:
+        with open(str(path), "w") as fp:
             ruamel.yaml.dump(
                 {
                     "host": host,
@@ -138,7 +142,7 @@ def save_test_server_yaml():
 
 def _test_a_server_configuration(server: UDMServer) -> UDMServer:
     auth = (server.username, server.password)
-    url = f"https://{server.host}/univention/udm/ldap/base/"
+    url = "https://{}/univention/udm/ldap/base/".format(server.host)
     resp = requests.get(url, auth=auth, verify=False)
     if resp.status_code != 200:
         raise udm_rest_client.exceptions.APICommunicationError(  # pragma: no cover
@@ -155,30 +159,36 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # pragma: no
     :raises: BadTestServerConfig
     :raises: NoTestServerConfig
     """
-    print(f"Trying to load test server config from {TEST_SERVER_YAML_FILENAME}...")
+    print(
+        "Trying to load test server config from {}...".format(TEST_SERVER_YAML_FILENAME)
+    )
     try:
         res = load_test_server_yaml()
         _test_a_server_configuration(res)
     except FileNotFoundError:
-        print(f"File not found: {TEST_SERVER_YAML_FILENAME}.")
+        print("File not found: {}.".format(TEST_SERVER_YAML_FILENAME))
     except TypeError as exc:
         raise BadTestServerConfig(
-            f"Error in {TEST_SERVER_YAML_FILENAME}: {exc!s}"
+            "Error in {}: {!s}".format(TEST_SERVER_YAML_FILENAME, exc)
         ) from exc
     except udm_rest_client.exceptions.APICommunicationError as exc:
         raise BadTestServerConfig(
-            f"Error connecting to test server using credentials "
-            f"from {TEST_SERVER_YAML_FILENAME}: [{exc.status}] {exc.reason}"
+            "Error connecting to test server using credentials "
+            "from {}: [{}] {!s}".format(TEST_SERVER_YAML_FILENAME, exc.status, exc)
         ) from exc
     else:
         return res
 
-    print(f"Trying to use running Docker container {TEST_DOCKER_CONTAINER_NAME!r}...")
+    print(
+        "Trying to use running Docker container {!r}...".format(
+            TEST_DOCKER_CONTAINER_NAME
+        )
+    )
     try:
         res = running_test_container()
         _test_a_server_configuration(res)
     except ContainerNotFound:
-        print(f"Container not found: {TEST_DOCKER_CONTAINER_NAME}.")
+        print("Container not found: {}.".format(TEST_DOCKER_CONTAINER_NAME))
     except ContainerIpUnknown as exc:
         raise BadTestServerConfig(str(exc)) from exc
     except udm_rest_client.exceptions.APICommunicationError as exc:
@@ -202,12 +212,12 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # pragma: no
         print("Test server config not found in environment.")
     except LDAPInvalidDnError as exc:
         raise BadTestServerConfig(
-            f"Invalid DN in environment variable 'UCS_USERDN': {exc!s}"
+            "Invalid DN in environment variable 'UCS_USERDN': {!s}".format(exc)
         )
     except udm_rest_client.exceptions.APICommunicationError as exc:
         raise BadTestServerConfig(
-            f"Error connecting to test server using credentials from the "
-            f"environment: [{exc.status}] {exc.reason}"
+            "Error connecting to test server using credentials from the "
+            "environment: [{}] {!s}".format(exc.status, exc)
         ) from exc
     else:
         return res
@@ -215,16 +225,14 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # pragma: no
     raise NoTestServerConfig("No test server configuration found.")
 
 
-@attr.s(
-    auto_attribs=True
-)  # using attr instead of dataclasses to remove dependency on Python 3.7+
+@attr.s()  # using attr instead of dataclasses to remove dependency on Python 3.7+
 class UserProperties:
-    username: str
-    password: str
-    firstname: str
-    lastname: str
-    birthday: str
-    disabled: bool
+    username = attr.ib(type=str)  # type: str
+    password = attr.ib(type=str)  # type: str
+    firstname = attr.ib(type=str)  # type: str
+    lastname = attr.ib(type=str)  # type: str
+    birthday = attr.ib(type=str)  # type: str
+    disabled = attr.ib(type=str)  # type: bool
     #  groups: list
 
 
@@ -233,7 +241,10 @@ class UserPropertiesFactory(factory.Factory):
         model = UserProperties
 
     username = factory.LazyFunction(
-        lambda: f"{factory.Faker('first_name').generate()}.{factory.Faker('last_name').generate()}".lower()  # noqa: E501
+        lambda: "{}.{}".format(
+            factory.Faker("first_name").generate(),
+            factory.Faker("last_name").generate(),
+        ).lower()  # noqa: E501
     )
     password = factory.Faker(
         "password",
@@ -254,16 +265,16 @@ class UserPropertiesFactory(factory.Factory):
     #  groups = []
 
 
-@attr.s(auto_attribs=True)
+@attr.s()
 class User:
-    dn: str
-    options: dict
-    policies: dict
-    position: str
-    props: UserProperties
-    superordinate: str
-    uri: str
-    uuid: str
+    dn = attr.ib(type=str)  # type: str
+    options = attr.ib(type=dict)  # type: Dict[str, str]
+    policies = attr.ib(type=dict)  # type: Dict[str, str]
+    position = attr.ib(type=str)  # type: str
+    props = attr.ib(type=UserProperties)  # type: UserProperties
+    superordinate = attr.ib(type=str)  # type: str
+    uri = attr.ib(type=str)  # type: str
+    uuid = attr.ib(type=str)  # type: str
 
 
 class UserFactory(factory.Factory):
@@ -318,7 +329,7 @@ def fake_user(base_dn):
     def _func() -> User:
         user = UserFactory()
         user.position = user.position.format(base_dn=base_dn)
-        user.dn = f"uid={user.props.username},{user.position}"
+        user.dn = "uid={},{}".format(user.props.username, user.position)
         return user
 
     return _func
@@ -331,10 +342,12 @@ def ucs_ca_file_path():
 
     def _func(host) -> Optional[Path]:
         global ca_cert_path
-        ca_cert_path = Path("/tmp/", f"{os.getpid()}_{host}_{ucs_ca_ori_filename}")
-        resp = requests.get(f"http://{host}/{ucs_ca_ori_filename}")
+        ca_cert_path = Path(
+            "/tmp/", "{}_{}_{}".format(os.getpid(), host, ucs_ca_ori_filename)
+        )
+        resp = requests.get("http://{}/{}".format(host, ucs_ca_ori_filename))
         resp.raise_for_status()
-        with open(ca_cert_path, "w") as fp:
+        with open(str(ca_cert_path), "w") as fp:
             fp.write(resp.text)
         return ca_cert_path
 
@@ -347,7 +360,7 @@ def udm_kwargs(test_server_configuration, ucs_ca_file_path) -> Dict[str, Any]:
     res = {
         "username": test_server_configuration.username,
         "password": test_server_configuration.password,
-        "url": f"https://{test_server_configuration.host}/univention/udm",
+        "url": "https://{}/univention/udm".format(test_server_configuration.host),
         "safe_chars_for_path_param": "/",
         "ssl_ca_cert": str(ucs_ca_file_path(test_server_configuration.host)),
     }
@@ -436,7 +449,7 @@ def user_created_via_http(
 ):
     created_user_dns = []
     auth = (udm_kwargs["username"], udm_kwargs["password"])
-    url = f"{udm_kwargs['url']}/users/user/"
+    url = "{}/users/user/".format(udm_kwargs["url"])
     if udm_kwargs.get("verify_ssl", True):
         verify_ssl = udm_kwargs.get("ssl_ca_cert", False)  # pragma: no cover
     else:
@@ -471,7 +484,7 @@ def modify_user_via_http(base_dn, http_headers_write, udm_kwargs):
     auth = (udm_kwargs["username"], udm_kwargs["password"])
 
     def _func(dn: str, user: User) -> None:
-        url = f"{udm_kwargs['url']}/users/user/{dn}"
+        url = "{}/users/user/{}".format(udm_kwargs["url"], dn)
         data = dict(
             (k, v)
             for k, v in attr.asdict(user).items()
@@ -501,7 +514,7 @@ def delete_user_via_http(base_dn, http_headers_read, udm_kwargs):
         verify_ssl = False
 
     def _func(dn: str) -> None:
-        url = f"{udm_kwargs['url']}/users/user/{dn}"
+        url = "{}/users/user/{}".format(udm_kwargs["url"], dn)
         resp = requests.delete(
             url, headers=http_headers_read, auth=auth, verify=verify_ssl
         )
@@ -514,8 +527,8 @@ def pytest_generate_tests(metafunc):
     if "serialize_obj_data" in metafunc.fixturenames:
         an_int = fake.pyint()
         a_float = fake.pyfloat()
-        a_date: datetime.date = fake.date_object()
-        a_dict: Dict[str, Any] = fake.pydict(10, True, int, str, bool, float)
+        a_date = fake.date_object()  # type: datetime.date
+        a_dict = fake.pydict(10, True, int, str, bool, float)  # type: Dict[str, Any]
         a_dict["dict"] = {"nested_bool": fake.pybool(), "nested_int": fake.pyint()}
         a_dict["date"] = fake.date_object()
         a_dict["none"] = None
@@ -523,17 +536,17 @@ def pytest_generate_tests(metafunc):
         a_dict_exp = copy.deepcopy(a_dict)
         a_dict_exp["date"] = a_dict_exp["date"].strftime("%Y-%m-%d")
         del a_dict_exp["_ignoreme"]
-        a_list: List[Any] = fake.pylist(10, True, int, str, bool, float)
+        a_list = fake.pylist(10, True, int, str, bool, float)  # type: List[Any]
         a_list.insert(2, fake.date_object())
         a_list_exp = copy.deepcopy(a_list)
         a_list_exp[2] = a_list_exp[2].strftime("%Y-%m-%d")
         a_tuple = fake.pytuple(10, True, int, str, bool, float)
         user = UserFactory()
         user.position = user.position.format(base_dn="dc=base,dc=dn")
-        user.dn = f"uid={user.props.username},{user.position}"
+        user.dn = "uid={},{}".format(user.props.username, user.position)
         a_udm_obj = UsersUserUdmObjectFactory(user_data=user)
         an_api_obj = openapi_client_udm.models.users_user.UsersUser(
-            dn=f"uid={fake.user_name()},{user.position}",
+            dn="uid={},{}".format(fake.user_name(), user.position),
             object_type="users/user",
             properties={fake.first_name(): fake.last_name()},
             uri=fake.url(),
@@ -555,20 +568,20 @@ def pytest_generate_tests(metafunc):
         ]
         random.shuffle(test_data)
         ids = [
-            f"bool ({val_in})" if type(val_in) is bool else type(val_in).__name__
+            "bool ({})".format(val_in)
+            if type(val_in) is bool
+            else type(val_in).__name__
             for val_in, val_out in test_data
         ]
         metafunc.parametrize("serialize_obj_data", test_data, ids=ids)
 
 
 @pytest.fixture
-def new_cn(
-    base_dn, http_headers_read, http_headers_write, udm_kwargs
-):
+def new_cn(base_dn, http_headers_read, http_headers_write, udm_kwargs):
     """Create a new container"""
     created_cn_dns = []
     auth = (udm_kwargs["username"], udm_kwargs["password"])
-    url = f"{udm_kwargs['url']}/container/cn/"
+    url = "{}/container/cn/".format(udm_kwargs["url"])
     if udm_kwargs.get("verify_ssl", True):
         verify_ssl = udm_kwargs.get("ssl_ca_cert", False)  # pragma: no cover
     else:
@@ -589,13 +602,13 @@ def new_cn(
         obj_url = resp.headers["Location"]
         dn = unquote(obj_url.rsplit("/", 1)[-1])
         created_cn_dns.append(dn)
-        assert dn == f"cn={data['properties']['name']},{data['position']}"
+        assert dn == "cn={},{}".format(data["properties"]["name"], data["position"])
         return dn, obj_url, data
 
     yield _func
 
     for dn in created_cn_dns:
-        url = f"{url}{dn}"
+        url = "{}{}".format(url, dn)
         resp = requests.delete(
             url, headers=http_headers_read, auth=auth, verify=verify_ssl
         )
