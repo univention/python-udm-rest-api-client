@@ -29,6 +29,12 @@ async def test_session_closes_on_context_exit(udm_kwargs):
 
 
 @pytest.mark.asyncio
+async def test_repeated_session_open(udm_kwargs):
+    async with UDM(**udm_kwargs) as udm:
+        udm.session.open()
+
+
+@pytest.mark.asyncio
 async def test_get_module(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         for name in ("groups/group", "shares/share", "users/user"):

@@ -562,9 +562,7 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture
-def new_cn(
-    base_dn, http_headers_read, http_headers_write, udm_kwargs
-):
+def new_cn(base_dn, http_headers_read, http_headers_write, udm_kwargs):
     """Create a new container"""
     created_cn_dns = []
     auth = (udm_kwargs["username"], udm_kwargs["password"])
