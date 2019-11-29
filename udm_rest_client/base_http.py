@@ -286,6 +286,8 @@ class Session:
         self._client_task_limiter = asyncio.Semaphore(max_client_tasks)
 
     def open(self) -> None:
+        if self._session:
+            return
         self._client = openapi_client_udm.ApiClient(self.openapi_client_config)
         self._session = self._client.rest_client.pool_manager
 
@@ -324,7 +326,7 @@ class Session:
                 elif 400 <= response.status <= 499:
                     raise NoObject(
                         f"UDM REST API returned status {response.status}, "
-                        "reason {response.reason!r} for URL {url!r}.",
+                        f"reason {response.reason!r} for URL {url!r}.",
                         dn=url,
                         module_name="<unknown>",
                     )
