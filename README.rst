@@ -52,7 +52,7 @@ If the SSL CA certificate is not available ``verify_ssl=False`` can be used in p
 Installation
 ------------
 
-1. Install `Python UDM REST Client` from pip::
+1. Install `Python UDM REST Client` via pip from `PyPI`_::
 
     $ pip install udm-rest-client
 
@@ -105,6 +105,13 @@ To capture the log messages for this project, subscribe to a logger named ``udm_
 
 The `UDM REST API` on the UCS server logs into the file ``/var/log/univention/directory-manager-rest.log``.
 
+Repo permissions
+----------------
+* Github: @dansan and @JuergenBS
+* Gitlab: @JuergenBS
+* PyPI: @dansan and @SamuelYaron
+* RTD: @dansan and @SamuelYaron
+
 Credits
 -------
 
@@ -117,6 +124,7 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 .. _`Python UDM API`: https://github.com/univention/univention-corporate-server/blob/4.4-2/management/univention-directory-manager-modules/modules/univention/udm/__init__.py
 .. _`OpenAPI Generator`: https://github.com/OpenAPITools/openapi-generator
 .. _`docs`: https://udm-rest-client.readthedocs.io
+.. _`PyPI`: https://pypi.org/project/udm-rest-client/
 .. |license| image:: https://img.shields.io/badge/License-AGPL%20v3-orange.svg
     :alt: GNU AGPL V3 license
     :target: https://www.gnu.org/licenses/agpl-3.0
