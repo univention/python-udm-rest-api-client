@@ -5,7 +5,9 @@
 import copy
 import datetime
 import inspect
+import io
 import logging
+import re
 import warnings
 from unittest.mock import MagicMock, patch
 
@@ -781,6 +783,45 @@ async def test_session_get_json_bad_url(udm_kwargs):
         url = f"{udm_kwargs['url']}/{fake.user_name()}/{fake.user_name()}"
         with pytest.raises(NoObject):
             await udm.session.get_json(url, ssl=False)
+
+
+@pytest.mark.asyncio
+async def test_session_get_json_no_password_in_log(udm_kwargs):
+    logger = logging.getLogger(base_http.logger.name)
+    logger.setLevel(logging.DEBUG)
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(
+        logging.Formatter(
+            fmt="%(asctime)s %(levelname)-5s %(module)s.%(funcName)s:%(lineno)d  %(message)s"
+        )
+    )
+    logger.addHandler(handler)
+    txt = fake.pystr()
+    logger.debug(txt)
+    handler.flush()
+    stream.seek(0)
+    stream_content = stream.read()
+    assert txt in stream_content
+    stream_index = stream.tell()
+
+    with patch.object(base_http, "logger", logger):
+        async with UDM(**udm_kwargs) as udm:
+            await udm.session.base_dn
+    handler.flush()
+    logger.removeHandler(handler)
+    stream.seek(stream_index)
+    stream_content = stream.read()
+    assert "base_http.get_json" in stream_content
+    assert "ldap/base" in stream_content
+    assert "application/json" in stream_content
+    m = re.match(r".*(auth.: \(.*?\))", stream_content)
+    assert m
+    assert m.groups()
+    auth_txt = m.groups()[0]
+    assert udm.session.openapi_client_config.username in auth_txt
+    assert udm.session.openapi_client_config.password not in auth_txt
 
 
 @pytest.mark.asyncio

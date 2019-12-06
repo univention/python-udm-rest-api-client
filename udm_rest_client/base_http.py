@@ -306,6 +306,10 @@ class Session:
         )
         async with self._client_task_limiter:
             async with self.session.get(url, **request_kwargs) as response:
+                request_kwargs["auth"] = (
+                    self.openapi_client_config.username,
+                    "********",
+                )
                 logger.debug(
                     "GET %r (**%r) -> %r (%r)",
                     url,
