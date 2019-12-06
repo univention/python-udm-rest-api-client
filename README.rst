@@ -25,6 +25,7 @@ Usage
 
 The ``UDM`` context manager opens and closes a HTTP session::
 
+    >>> import asyncio
     >>> from udm_rest_client.udm import UDM
     >>>
     >>> async def get_obj(mod_name, dn):
@@ -37,8 +38,13 @@ The ``UDM`` context manager opens and closes a HTTP session::
     ...         mod = udm.get(mod_name)
     ...         return await mod.get(dn)
     ...
-    >>> import asyncio
+    >>> # Python 3.6:
+    >>> loop = asyncio.get_event_loop()
+    >>> obj = loop.run_until_complete(get_obj("users/user", "uid=foo,cn=users,BASE-DN"))
+    >>>
+    >>> # Python 3.7+:
     >>> obj = asyncio.run(get_obj("users/user", "uid=foo,cn=users,BASE-DN"))
+    >>>
     >>> print(obj)
     UdmObject('users/user', 'uid=foo,cn=users,BASE-DN')
     >>> print(obj.props.username)
