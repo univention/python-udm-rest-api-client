@@ -256,14 +256,6 @@ class Session:
             warnings.warn(txt, InsecureRequestWarning)
             logger.warning(txt)
 
-        if not kwargs.get("verify_ssl", True):
-            logger.warning(
-                "Instead of disabling SSL certificate verification, better "
-                "download the CA of the UCS server from http://%s/ucs-root-ca.crt"
-                "and use >>> UDM(..., ssl_ca_cert='ucs-root-ca.crt')",
-                _url.netloc,
-            )
-
         # purge openapi client configuration cache
         openapi_client_udm.Configuration._default = None
         self.openapi_client_config = openapi_client_udm.Configuration(
