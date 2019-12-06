@@ -27,32 +27,33 @@
 # <http://www.gnu.org/licenses/>.
 
 """
-Univention Directory Manager Modules (UDM) API
+UDM REST API Client library
 
-This is a simplified API for accessing UDM objects.
-It consists of UDM modules and UDM object.
+Python library to interact with the Univention `UDM REST API`, implementing
+the interface of the `simple Python UDM API` [1].
+
+The API consists of UDM modules and UDM object.
 UDM modules are factories for UDM objects.
-UDM objects manipulate LDAP objects.
+UDM objects manipulate LDAP objects on the UCS server.
 
 Usage::
 
-    udm = UDM('myuser', 's3cr3t', 'https://FQ.DN/univention/udm/')
-    user_mod = udm.get('users/user')
+    async with UDM("myuser", "s3cr3t", "https://FQ.DN/univention/udm/") as udm:
+        user_mod = udm.get('users/user')
 
-    obj = user_mod.get(dn)
-    obj.props.firstname = 'foo'  # modify property
-    obj.position = 'cn=users,cn=example,dc=com'  # move LDAP object
-    obj.save()  # apply changes
+        obj = user_mod.get(dn)
+        obj.props.firstname = 'foo'  # modify property
+        obj.position = 'cn=users,cn=example,dc=com'  # move LDAP object
+        obj.save()  # apply changes and reload object from LDAP
 
-    obj = user_mod.get(dn)
-    obj.delete()
+        obj = user_mod.get(dn)
+        obj.delete()  # delete object
 
-    obj = user_mod.new()
-    obj.props.username = 'bar'
-    obj.save().refresh()  # reload obj.props from LDAP after save()
+        async for obj in udm.get('users/user').search('uid=a*'):
+            print(obj.props.firstname, obj.props.lastname)
 
-    for obj in udm.get('users/user').search('uid=a*'):  # search() returns a generator
-        print(obj.props.firstname, obj.props.lastname)
+
+[1] https://docs.software-univention.de/developer-reference-4.4.html#udm:rest_api
 """
 
 from typing import Sequence
@@ -84,10 +85,11 @@ class UDM:
         async def func():
             async with UDM("myuser", "s3cr3t", "https://FQ.DN/univention/udm/") as udm:
                 group_mod = udm.get('groups/group')
-                obj = await group_mod.get('$DN')
+                obj = await group_mod.get(dn)
                 # obj is of type udm_rest_client.base_http.UdmObject
 
-    HTTP(S) sessions will be closed upon existing the async context manager.
+    HTTP(S) sessions will be closed upon existing the asynchronous context manager.
+    It is recommended to make as many operations as possible in the same session.
     """
 
     def __init__(
