@@ -202,7 +202,13 @@ def get_openapi_schema(host: str, secure: bool) -> str:
 )
 @coro
 async def update_openapi_client(
-    host: str, generator: str, jar: str, keep_image: bool, secure: bool, quiet: bool, system: bool
+    host: str,
+    generator: str,
+    jar: str,
+    keep_image: bool,
+    secure: bool,
+    quiet: bool,
+    system: bool,
 ):
     if not host:
         print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
