@@ -30,32 +30,22 @@
 Base classes for (simplified) UDM modules and objects.
 """
 
+import collections
 import copy
 import pprint
-from collections import namedtuple
-from typing import Any, Dict, Iterable, Iterator, List, Union
+from typing import Any, Dict, Iterable, Iterator, List, Tuple, Union
 
-LdapMapping = namedtuple("LdapMapping", ("ldap2udm", "udm2ldap"))
+LdapMapping = collections.namedtuple("LdapMapping", ("ldap2udm", "udm2ldap"))
 
 
-class BaseObjectProperties:
+class BaseObjectProperties(collections.abc.Mapping, collections.abc.Iterable):
     """Container for UDM properties."""
 
     def __init__(self, udm_obj: "BaseObject") -> None:
         self._udm_obj = udm_obj
 
-    def __repr__(self) -> str:
-        return "{}({})".format(
-            self.__class__.__name__,
-            pprint.pformat(
-                dict(
-                    (k, v)
-                    for k, v in self.__dict__.items()
-                    if not str(k).startswith("_")
-                ),
-                indent=2,
-            ),
-        )
+    def __contains__(self, item) -> bool:
+        return hasattr(self, item)
 
     def __deepcopy__(
         self, memo: Dict[int, "BaseObjectProperties"]
@@ -69,6 +59,56 @@ class BaseObjectProperties:
                 else:
                     setattr(memo[id_self], k, copy.deepcopy(v))
         return memo[id_self]
+
+    def __eq__(self, other: "BaseObjectProperties") -> bool:
+        # compare keys first (fast and low memory)
+        if set(self.keys()) != set(other.keys()):
+            return False
+        # compare values one at a time to reduce memory usage
+        for k, v in self.items():
+            if v != getattr(other, k):
+                return False
+        return True
+
+    def __getitem__(self, key):
+        try:
+            return getattr(self, key)
+        except AttributeError as exc:
+            raise KeyError(
+                f"{self.__class__.__name__} does not have key {key!r}."
+            ) from exc
+
+    def __iter__(self) -> Iterator[str]:
+        return (k for k in self.__dict__.keys() if not str(k).startswith("_"))
+
+    def __len__(self):
+        return len(list(self.keys()))
+
+    def __repr__(self) -> str:
+        return "{}({})".format(
+            self.__class__.__name__,
+            pprint.pformat(dict((k, v) for k, v in self.items()), indent=2,),
+        )
+
+    def __setitem__(self, key, value):
+        if key not in self:
+            raise TypeError(f"Assignment to non existent attribute {key!r} forbidden.")
+        setattr(self, key, value)
+
+    def items(self) -> Iterable[Tuple[str, Any]]:
+        return ((k, v) for k, v in self.__dict__.items() if not str(k).startswith("_"))
+
+    def keys(self) -> Iterable[str]:
+        return (k for k in iter(self))
+
+    def update(self, other: "BaseObjectProperties" = None, **kwargs) -> None:
+        for k in other or []:
+            self[k] = other[k]
+        for k in kwargs:
+            self[k] = kwargs[k]
+
+    def values(self) -> Iterable[Any]:
+        return (v for k, v in self.__dict__.items() if not str(k).startswith("_"))
 
 
 class BaseObject:
@@ -120,6 +160,16 @@ class BaseObject:
         self.position: str = ""
         self.superordinate: str = None
         self._udm_module: BaseModule = None
+
+    def __eq__(self, other: "BaseObject") -> bool:
+        if self._udm_module.name != other._udm_module.name:
+            return False
+        for attr in ("dn", "props", "policies", "position", "superordinate"):
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        if set(self.options) != set(other.options):
+            return False
+        return True
 
     def __repr__(self) -> str:
         return "{}({!r}, {!r})".format(

@@ -498,11 +498,7 @@ class UdmObjectProperties(BaseObjectProperties):
     """Container for UDM properties."""
 
     def _to_dict(self) -> Dict[str, Any]:
-        return dict(
-            (k, _serialize_obj(v))
-            for k, v in self.__dict__.items()
-            if not str(k).startswith("_")
-        )
+        return dict((k, _serialize_obj(v)) for k, v in self.items())
 
 
 class UdmObject(BaseObject):
@@ -571,6 +567,14 @@ class UdmObject(BaseObject):
             memo[id_self]._api_obj = self._api_obj.__class__(**obj_dump)
             # _udm_module must be set in the current session
         return memo[id_self]
+
+    def __eq__(self, other: "UdmObject") -> bool:
+        if not super().__eq__(other):
+            return False
+        for attr in ("uri", "uuid"):
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
 
     async def reload(self) -> "UdmObject":
         """

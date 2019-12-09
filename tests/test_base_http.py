@@ -869,3 +869,25 @@ async def test_modify_users_self_redirects_to_users_user(
         mod = udm.get("users/user")
         obj = await mod.get(administrator_dn)
         assert obj.props.firstname == new_fn
+
+
+@pytest.mark.asyncio
+async def test_obj_eq(user_created_via_http, udm_kwargs):
+    dn, url, user = user_created_via_http()
+
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        obj = await mod.get(dn)
+
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        obj2 = await mod.get(dn)
+
+    assert obj == obj2
+
+    for attri in ("uri", "uuid"):
+        ori_val = getattr(obj, attri)
+        setattr(obj, attri, fake.pystr())
+        assert obj != obj2
+        setattr(obj, attri, ori_val)
+        assert obj == obj2

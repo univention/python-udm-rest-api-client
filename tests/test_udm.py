@@ -61,6 +61,7 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
         assert obj.dn == dn
         assert obj._udm_module.name == object_type
         assert obj.uuid == uuid
+        return obj
 
     with ldap_connection(connection_kwargs={"read_only": True}) as conn:
         logger.info("Successful LDAP login.")
@@ -72,7 +73,7 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
             ")",
             attributes=["univentionObjectType", "univentionObjectFlag", "entryUUID"],
         )
-        all_objs = {}
+    all_objs = {}
     async with UDM(**udm_kwargs) as udm:
         # test one object per udm module
         for result in conn.entries:
@@ -86,16 +87,10 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
         logger.info(
             "Reading %d objects of different UDM module types...", len(module_names)
         )
-        objs = await asyncio.gather(
-            *(
-                load_obj_by_dn(udm, random.choice(all_objs[module_name]))
-                for module_name in module_names
-            )
-        )
-        with open("/tmp/objs", "a") as fp:
-            for obj in objs:
-                fp.write(f"{obj!r}\n")
-        # TODO: what's this? all None!
+        entries = [random.choice(all_objs[module_name]) for module_name in module_names]
+        objs = await asyncio.gather(*(load_obj_by_dn(udm, entry) for entry in entries))
+        for entry, obj in zip(entries, objs):
+            assert entry.entry_dn == obj.dn
 
 
 def test_version():
