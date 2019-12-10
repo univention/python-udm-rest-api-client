@@ -2,6 +2,14 @@
 History
 =======
 
+0.2.0 (2019-12-10)
+------------------
+
+* ``Mapping`` and ``Iterable`` interfaces were added to the object properties class. Adds item access (``obj.props["key"]``), ``obj.props.get("key")``, ``len(obj.props)``, ``key in obj.props``, ``obj.props.keys()``, ``obj.props.values()``, ``obj.props.items()``
+* documentation improvements
+* HTTP basic passwords are no longer logged
+* map ``options`` and ``policies`` back to original values (were being rewritten to pep8 conform keys by the OpenAPI client)
+
 0.1.1 (2019-11-25)
 ------------------
 
