@@ -626,7 +626,13 @@ class UdmObject(BaseObject):
                 continue
             elif k == "props":
                 for prop, value in v.items():
-                    if value != old_obj["properties"][prop]:
+                    if isinstance(value, list):
+                        new_value = set(value)
+                        old_value = set(old_obj["properties"][prop])
+                    else:
+                        new_value = value
+                        old_value = old_obj["properties"][prop]
+                    if new_value != old_value:
                         diff_dict.setdefault("properties", {})[prop] = value
             elif k == "superordinate" and not hasattr(old_obj, "superordinate"):
                 continue
@@ -634,6 +640,20 @@ class UdmObject(BaseObject):
                 # When Bug #50178 has been fixed, change 'options' to be a dict
                 # in the Python API.
                 diff_dict[k] = dict((option, True) for option in v)
+            elif k == "policies" and v:
+                if hasattr(self._api_obj.policies, "attribute_map"):
+                    attribute_map: Dict[str, str] = self._api_obj.policies.attribute_map
+                    old_policies = dict(
+                        (attribute_map[k], v)
+                        for k, v in self._api_obj.policies.to_dict().items()
+                    )
+                else:
+                    old_policies = self._api_obj.policies
+                # v is Dict[str, List[str]], compare as Dict[str, Set[str]]
+                if dict((diff_k, set(diff_v)) for diff_k, diff_v in v.items()) == dict(
+                    (new_k, set(new_v)) for new_k, new_v in old_policies.items()
+                ):
+                    continue
             elif k == "position" and v:
                 diff_dict[k] = v  # always set position
             else:
@@ -657,11 +677,14 @@ class UdmObject(BaseObject):
                 await self._copy_from_api_instance_obj(api_obj)
                 logger.info("Finished moving object, new DN: %r", self.dn)
 
+            # position is always set, ignore if unchanged
             if diff_dict == {"position": self._api_obj.position}:
                 logger.debug("No modifications for %r found, nothing to do.", self)
                 return self
             else:
-                logger.debug("Modifications to %r found: %r", self, diff_dict)
+                logger.debug(
+                    "Modifications to %r found (ignore 'position'): %r", self, diff_dict
+                )
             operation = "update"
             dn = self.dn
         else:
@@ -745,16 +768,24 @@ class UdmObject(BaseObject):
         self.dn = api_model_obj.dn
         self.uri = api_model_obj.uri
         self.uuid = api_model_obj.uuid
-        if hasattr(api_model_obj.options, "to_dict"):
+        if hasattr(api_model_obj.options, "attribute_map"):
             #  openapi_client_udm.models.usersuser_options.UsersuserOptions etc
-            options = api_model_obj.options.to_dict()
+            attribute_map: Dict[str, str] = api_model_obj.options.attribute_map
+            options = dict(
+                (attribute_map[k], v)
+                for k, v in api_model_obj.options.to_dict().items()
+            )
         else:
             # empty dict
             options = api_model_obj.options
         self.options = [k for k, v in options.items() if v]
-        if hasattr(api_model_obj.policies, "to_dict"):
+        if hasattr(api_model_obj.policies, "attribute_map"):
             # openapi_client_udm.models.settingsmswmifilter_policies.SettingsmswmifilterPolicies
-            policies = api_model_obj.policies.to_dict()
+            attribute_map: Dict[str, str] = api_model_obj.policies.attribute_map
+            policies = dict(
+                (attribute_map[k], v)
+                for k, v in api_model_obj.policies.to_dict().items()
+            )
         else:
             # empty dict
             policies = api_model_obj.policies

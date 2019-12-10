@@ -10,6 +10,7 @@ import logging
 import re
 import warnings
 from unittest.mock import MagicMock, patch
+from urllib.parse import unquote
 
 import attr
 import faker
@@ -246,6 +247,7 @@ async def test_get_user(user_created_via_http, udm_kwargs):
         obj = await mod.get(dn)
     assert obj.dn == dn
     assert obj.uri == url
+    assert "policies/umc" in obj.policies
     assert obj.position == user["position"]
     assert obj.props.firstname == user["properties"]["firstname"]
     assert obj.props.lastname == user["properties"]["lastname"]
@@ -414,9 +416,9 @@ async def test_modify_user(fake_user, user_created_via_http, udm_kwargs):
         assert obj.dn == old_user_dn
         assert obj.uri == old_user_url
         policies = {
-            "policies_desktop": [],
-            "policies_pwhistory": [],
-            "policies_umc": [],
+            "policies/desktop": [],
+            "policies/pwhistory": [],
+            "policies/umc": [],
         }
         assert obj.policies == policies
         for k, v in modify_props.items():
@@ -435,7 +437,7 @@ async def test_modify_user(fake_user, user_created_via_http, udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_move_user(new_cn, user_created_via_http, udm_kwargs):
+async def test_move_user_no_props_changed(new_cn, user_created_via_http, udm_kwargs):
     old_user_dn, old_user_url, old_user_data = user_created_via_http()
     cn_dn, cn_obj_url, cn_data = new_cn()
     async with UDM(**udm_kwargs) as udm:
@@ -452,7 +454,6 @@ async def test_move_user(new_cn, user_created_via_http, udm_kwargs):
         assert obj.dn != old_user_dn
         assert obj.dn == f"uid={obj.props.username},{cn_dn}"
         assert obj.uri != old_user_url
-        from urllib.parse import unquote
 
         assert unquote(obj.uri) == old_user_url.rsplit("/", 1)[0] + "/" + obj.dn
 
@@ -461,6 +462,40 @@ async def test_move_user(new_cn, user_created_via_http, udm_kwargs):
         assert obj_new.uri == obj.uri
         assert obj_new.position == cn_dn
         assert obj.props.firstname == old_user_data["properties"]["firstname"]
+
+
+@pytest.mark.asyncio
+async def test_move_and_modify_user(new_cn, user_created_via_http, udm_kwargs):
+    old_user_dn, old_user_url, old_user_data = user_created_via_http()
+    cn_dn, cn_obj_url, cn_data = new_cn()
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        obj = await mod.get(old_user_dn)
+        assert obj.dn == old_user_dn
+        assert obj.uri == old_user_url
+        assert obj.position == old_user_data["position"]
+        assert obj.props.firstname == old_user_data["properties"]["firstname"]
+
+        obj.position = cn_dn
+        new_description = fake.text(max_nb_chars=50)
+        obj.props.description = new_description
+        new_lastname = fake.last_name()
+        obj.props.lastname = new_lastname
+        res = await obj.save()
+        assert res is obj
+        assert obj.dn != old_user_dn
+        assert obj.dn == f"uid={obj.props.username},{cn_dn}"
+        assert obj.uri != old_user_url
+
+        assert unquote(obj.uri) == old_user_url.rsplit("/", 1)[0] + "/" + obj.dn
+
+        obj_new = await mod.get(obj.dn)
+        assert obj_new.dn == obj.dn
+        assert obj_new.uri == obj.uri
+        assert obj_new.position == cn_dn
+        assert obj.props.firstname == old_user_data["properties"]["firstname"]
+        assert obj.props.lastname == new_lastname
+        assert obj.props.description == new_description
 
 
 @pytest.mark.asyncio
