@@ -2,6 +2,11 @@
 History
 =======
 
+0.2.1 (2019-12-14)
+------------------
+
+* fix not detecting changes in mutable property values
+
 0.2.0 (2019-12-10)
 ------------------
 

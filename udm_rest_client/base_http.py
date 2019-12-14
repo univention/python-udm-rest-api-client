@@ -40,6 +40,7 @@ import logging
 import re
 import time
 import warnings
+from collections.abc import MutableMapping, MutableSequence
 from functools import lru_cache
 from typing import Any, AsyncIterator, Dict, List, Pattern, Tuple, TypeVar, Union, cast
 from urllib.parse import SplitResult, unquote, urljoin, urlsplit
@@ -817,6 +818,9 @@ class UdmObject(BaseObject):
                     DnPropertyEncoder(k, dn, self._udm_module.session).decode()
                     for dn in v
                 ]
+            elif isinstance(v, MutableSequence) or isinstance(v, MutableMapping):
+                # changing obj.property.x should not change obj._api_obj.property.x
+                v = copy.deepcopy(v)
             setattr(self.props, k, v)
         superordinate: str = getattr(api_model_obj, "superordinate", None)
         if (
