@@ -437,6 +437,59 @@ async def test_modify_user(fake_user, user_created_via_http, udm_kwargs):
 
 
 @pytest.mark.asyncio
+async def test_add_attribute_of_previously_deactivated_option(
+    http_headers_write, test_server_configuration, udm_kwargs
+):
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("shares/share")
+        obj = await mod.new()
+        obj.options = ["samba"]
+        obj.props.name = fake.first_name()
+        obj.props.host = "file.example.com"
+        obj.props.path = f"/home/share{fake.first_name()}"
+        await obj.save()
+
+        obj_new = await mod.get(obj.dn)
+        assert obj_new.props.name == obj.props.name
+        if "nfs" in obj.options:
+            # handle http://forge.univention.org/bugzilla/show_bug.cgi?id=50974
+            print("NFS enabled by default :/")
+            import requests
+
+            auth = (udm_kwargs["username"], udm_kwargs["password"])
+            if udm_kwargs.get("verify_ssl", True):
+                verify_ssl = udm_kwargs.get("ssl_ca_cert", False)  # pragma: no cover
+            else:
+                verify_ssl = False
+            resp = requests.patch(
+                obj_new.uri,
+                headers=http_headers_write,
+                auth=auth,
+                verify=verify_ssl,
+                json={"options": {"samba": True, "nfs": False}},
+            )
+            print(resp.reason)
+            try:
+                print(resp.json())
+            except (AttributeError, ValueError):  # pragma: no cover
+                print(resp.text)
+            assert resp.status_code in (201, 204)
+            obj_new = await mod.get(obj.dn)
+        assert "samba" in obj_new.options
+        assert "nfs" not in obj_new.options
+        assert not hasattr(obj_new.props, "root_squash")
+
+        obj_new.options.append("nfs")
+        obj_new.props.root_squash = True
+        await obj_new.save()
+
+        obj_new2 = await mod.get(obj_new.dn)
+        assert "nfs" in obj_new2.options
+        assert hasattr(obj_new2.props, "root_squash")
+        assert obj.props.root_squash is True
+
+
+@pytest.mark.asyncio
 async def test_move_user_no_props_changed(new_cn, user_created_via_http, udm_kwargs):
     old_user_dn, old_user_url, old_user_data = user_created_via_http()
     cn_dn, cn_obj_url, cn_data = new_cn()
