@@ -2,6 +2,11 @@
 History
 =======
 
+0.3.0 (2020-03-18)
+------------------
+
+* allow setting properties that only exist after enabling an option (`Bug #50972 <http://forge.univention.org/bugzilla/show_bug.cgi?id=50972>`_)
+
 0.2.1 (2019-12-14)
 ------------------
 
