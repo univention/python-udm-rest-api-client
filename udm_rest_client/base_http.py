@@ -629,10 +629,10 @@ class UdmObject(BaseObject):
                 for prop, value in v.items():
                     if isinstance(value, list):
                         new_value = set(value)
-                        old_value = set(old_obj["properties"][prop])
+                        old_value = set(old_obj["properties"].get(prop, []))
                     else:
                         new_value = value
-                        old_value = old_obj["properties"][prop]
+                        old_value = old_obj["properties"].get(prop)
                     if new_value != old_value:
                         diff_dict.setdefault("properties", {})[prop] = value
             elif k == "superordinate" and not hasattr(old_obj, "superordinate"):
