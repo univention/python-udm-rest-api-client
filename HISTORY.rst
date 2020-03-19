@@ -2,6 +2,11 @@
 History
 =======
 
+0.3.1 (2020-03-19)
+------------------
+
+* Update download URL of openapi-generator jar.
+
 0.3.0 (2020-03-18)
 ------------------
 
