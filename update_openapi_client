@@ -29,7 +29,7 @@ if not inspect.isfunction(pip_main):
 
 
 DOCKER_IMAGE = "openapitools/openapi-generator-cli:latest"
-JAR_URL = "http://central.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.0/openapi-generator-cli-4.2.0.jar"
+JAR_URL = "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.3/openapi-generator-cli-4.2.3.jar"
 TARGET_PYTHON_PACKAGE_NAME = "openapi_client_udm"
 TARGET_SCHEMA_FILENAME = "udm_openapi.json"
 OPENAPI_GENERATE_COMMAND_COMMON = (
