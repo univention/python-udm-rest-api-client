@@ -69,6 +69,9 @@ Installation
 
 Use ``--insecure`` to ignore SSL verification errors. See ``--help`` for more options.
 
+Use ``--username`` and ``--password`` to provide credentials if access to your openapi.json is protected. This is the
+default in newer versions of UCS and thus credentials are needed.
+
 **Important**:
 Whenever a new UDM module is installed in the domain, it is necessary to rerun ``update_openapi_client``.
 The new UDM module will otherwise not be available in the `Python UDM REST Client`.
