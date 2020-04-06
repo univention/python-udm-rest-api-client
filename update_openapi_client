@@ -18,6 +18,7 @@ from tempfile import TemporaryDirectory
 import click
 import docker
 import requests
+from requests.auth import HTTPBasicAuth
 from urllib3.exceptions import InsecureRequestWarning
 
 try:
@@ -136,7 +137,7 @@ def run_openapi_generator_local_java(
         click.echo(stdout.decode())
 
 
-def get_openapi_schema(host: str, secure: bool) -> str:
+def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str:
     url = OPENAPI_SCHEMA_URL.format(host=host)
 
     click.echo(f"Downloading OpenAPI schema from {url!r}...")
@@ -145,11 +146,17 @@ def get_openapi_schema(host: str, secure: bool) -> str:
     if not secure:
         request_kwargs["verify"] = False
         requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+    if user and password:
+        request_kwargs["auth"] = HTTPBasicAuth(user, password)
 
     try:
         resp = requests.get(url, **request_kwargs)
     except requests.ConnectionError as exc:
         print_error_and_exit(str(exc))
+    if resp.status_code == 401:
+        print_error_and_exit(
+            f"The request was not authorized (401). Please provide user credentials to download the OpenAPI schema from {url!r}."
+        )
     if resp.status_code != 200:
         print_error_and_exit(
             f"Error downloading OpenAPI schema from {url!r}: [{resp.status_code}] {resp.reason}"
@@ -200,6 +207,14 @@ def get_openapi_schema(host: str, secure: bool) -> str:
     default=True,
     help="Whether to install into a system or the users home directory",
 )
+@click.option(
+    "--username",
+    help="The username to authenticate against the UDM REST API."
+)
+@click.option(
+    "--password",
+    help="The password to authenticate against the UDM REST API"
+)
 @coro
 async def update_openapi_client(
     host: str,
@@ -209,6 +224,8 @@ async def update_openapi_client(
     secure: bool,
     quiet: bool,
     system: bool,
+    username: str,
+    password: str,
 ):
     if not host:
         print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
@@ -218,7 +235,7 @@ async def update_openapi_client(
         )
     if jar:
         jar = Path(jar)
-    txt = get_openapi_schema(host, secure)
+    txt = get_openapi_schema(host, username, password, secure)
     with TemporaryDirectory() as temp_dir, open(
         Path(temp_dir, TARGET_SCHEMA_FILENAME), "w"
     ) as temp_file_fp:
