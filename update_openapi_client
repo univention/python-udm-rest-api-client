@@ -208,12 +208,10 @@ def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str
     help="Whether to install into a system or the users home directory",
 )
 @click.option(
-    "--username",
-    help="The username to authenticate against the UDM REST API."
+    "--username", help="The username to authenticate against the UDM REST API."
 )
 @click.option(
-    "--password",
-    help="The password to authenticate against the UDM REST API"
+    "--password", help="The password to authenticate against the UDM REST API"
 )
 @coro
 async def update_openapi_client(

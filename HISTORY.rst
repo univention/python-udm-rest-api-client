@@ -2,6 +2,11 @@
 History
 =======
 
+0.3.2 (2020-03-19)
+------------------
+
+* Add the possibility to provide credentials in the update_openapi_client script to download the schema file.
+
 0.3.1 (2020-03-19)
 ------------------
 
