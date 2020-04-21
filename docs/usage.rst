@@ -8,7 +8,7 @@ Then use the ``UDM`` context manager to open a HTTPS session and authenticate.
 Change some properties
 ----------------------
 
-Open the session, get the current LDAP object, change some attributes and save the changes back zo LDAP::
+Open the session, get the current LDAP object, change some attributes and save the changes back to LDAP::
 
     import asyncio
     from udm_rest_client.udm import UDM

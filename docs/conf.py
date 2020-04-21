@@ -181,7 +181,7 @@ texinfo_documents = [
         "Python UDM REST Client Documentation",
         author,
         "udm_rest_client",
-        "Python libreary to interact with the IDM of a UCS system through its UDM REST API.",
+        "Python library to interact with the IDM of a UCS system through its UDM REST API.",
         "Miscellaneous",
     )
 ]
