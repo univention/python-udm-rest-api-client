@@ -42,5 +42,5 @@ get_openapi_schema () {
     export UCS_CONTAINER_IP=$(docker_container_ip "$CONTAINER")
   fi
   [ -z "$UCS_CONTAINER_IP" ] && echo "Empty container IP" && return 1
-  curl -s --fail -X GET http://$UCS_CONTAINER_IP/univention/udm/openapi.json
+  curl -s --fail -u Administrator:univention -X GET http://$UCS_CONTAINER_IP/univention/udm/openapi.json
 }
