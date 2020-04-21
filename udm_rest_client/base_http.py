@@ -265,7 +265,6 @@ class Session:
         # purge openapi client configuration cache
         openapi_client_udm.Configuration._default = None
 
-        self.kwargs = {}
         for k, v in kwargs.items():
             if not hasattr(self.openapi_client_config, k):
                 raise ConfigurationError(
@@ -273,7 +272,6 @@ class Session:
                     f"'openapi_client_udm.Configuration' object."
                 )
             setattr(self.openapi_client_config, k, v)
-            self.kwargs[k] = v
         self._client: openapi_client_udm.ApiClient = None
         self._session: aiohttp.ClientSession = None
         self._client_task_limiter = asyncio.Semaphore(max_client_tasks)
