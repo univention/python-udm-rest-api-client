@@ -6,7 +6,7 @@ if [ -z "$UCS_REPOS" ]; then
 fi
 
 export DOCKER_REGISTRY="docker-test-upload.software-univention.de"
-export UCS_VERSION="4.4-2"
+export UCS_VERSION="4.4-4"
 
 export UCS_JOINED_TARGET_DOCKER_IMG="${DOCKER_REGISTRY}/ucs-master-amd64-joined"
 export UCS_JOINED_TARGET_DOCKER_IMG_VERSION="${UCS_JOINED_TARGET_DOCKER_IMG}:${UCS_REPOS}-${UCS_VERSION}"

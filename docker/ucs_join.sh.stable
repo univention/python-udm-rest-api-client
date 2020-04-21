@@ -1,6 +1,6 @@
 #!/bin/bash
 
-exec > /var/log/univention/ucs_join_stable.log
+exec > /var/log/univention/docker-build-ucs_join_stable.log
 exec 2>&1
 
 set +e
