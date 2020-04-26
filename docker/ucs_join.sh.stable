@@ -22,6 +22,54 @@ fi
 echo "Installing UDM REST API..."
 univention-install -y univention-directory-manager-rest
 
+if [ "$(</root/install_ucsschool)" = "1" ]; then
+    echo "Installing 'ucsschool' app..."
+    echo -n univention > /tmp/univention
+    univention-app install --noninteractive --username Administrator --pwdfile /tmp/univention --skip-checks=must_have_valid_license ucsschool
+
+    echo "Configuring UCS@school for singleserver setup..."
+    curl -o /root/schoolinstaller.py https://raw.githubusercontent.com/univention/univention-corporate-server/4.4-4/test/utils/schoolinstaller.py
+    chmod +x /root/schoolinstaller.py
+    /root/schoolinstaller.py -u Administrator -p univention -S -o DEMOSCHOOL2
+
+    eval $(ucr shell domainname ldap/base ldap/hostdn)
+    ADMIN_GROUP="ucsschool-kelvin-rest-api-admins"
+    echo "Creating group '$ADMIN_GROUP' for users that are allowed to connect to the Kelvin API..."
+    univention-directory-manager groups/group create "$@" --ignore_exists \
+        --position "cn=groups,$ldap_base" \
+        --set name="$ADMIN_GROUP" \
+        --set description="Users that are allowed to connect to the Kelvin API." \
+        --append "users=uid=Administrator,cn=users,$ldap_base" || die
+
+    UDM_REST_GROUP="UDM-API-enabled-machines"
+    UDM_REST_GROUP_DN="cn=$UDM_REST_GROUP,cn=groups,$ldap_base"
+    echo "Creating group '$UDM_REST_GROUP' for machine accounts that are allowed to access the UDM REST API."
+    udm groups/group create \
+        --position "cn=groups,$ldap_base" \
+        --set name="$UDM_REST_GROUP" \
+        --set description="Machine accounts that are allowed to connect to the UDM REST API."
+
+    echo "Whitelisting new group for UDM REST API."
+    ucr set directory/manager/rest/authorized-groups/udm-api-enabled-machines="$UDM_REST_GROUP_DN"
+
+    MACHINE_ACCOUNT_NAME=kelvin-container
+    echo "Creating machine account '$MACHINE_ACCOUNT_NAME' to use for Kelvin API container and adding it to group '$UDM_REST_GROUP'."
+    MACHINE_PASSWORD="$(dd if=/dev/urandom bs=64 count=1 2>/dev/null | base64 | head -1 | cut -b -20)"
+    echo "$MACHINE_PASSWORD" > "/etc/$MACHINE_ACCOUNT_NAME.secret"
+    echo "Machine password stored in /etc/$MACHINE_ACCOUNT_NAME.secret"
+    chmod 400 /etc/kelvin-container.secret
+    udm computers/memberserver create \
+        --position "cn=memberserver,cn=computers,$ldap_base" \
+        --set name="$MACHINE_ACCOUNT_NAME" \
+        --append "groups=$UDM_REST_GROUP_DN" \
+        --set description="Account for Kelvin API container" \
+        --set "domain=$domainname" \
+        --set "password=$MACHINE_PASSWORD"
+else
+    echo "Not installing 'ucsschool' app."
+fi
+rm -f /root/install_ucsschool
+
 echo "Setting UCRV nameserver to fixed value..."
 ucr set nameserver1=127.0.0.1
 

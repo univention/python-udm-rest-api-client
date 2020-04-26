@@ -2,9 +2,11 @@ FROM univention/ucs-master-amd64:latest
 ENV container=docker domainname=ucs-test.intranet hostname=master rootpwd=univention
 EXPOSE 9080:80/tcp 9443:443/tcp
 COPY ucs_* /tmp/
+ARG UCSSCHOOL
 RUN echo "Europe/Berlin" > /etc/timezone && \
     cp -v /usr/share/zoneinfo/Europe/Berlin /etc/localtime && \
     ucr set "hosts/static/127.0.1.1=master.ucs-test.intranet master" && \
+    echo "${UCSSCHOOL}" > /root/install_ucsschool && \
     mv -v /tmp/ucs_profile /var/cache/univention-system-setup/profile && \
     mv -v /tmp/ucs_join.sh.stable /usr/local/sbin/ucs_join.sh && \
     mv -v /tmp/ucs_join.service /etc/systemd/system/ucs_join.service && \

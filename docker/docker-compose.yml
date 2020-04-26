@@ -8,6 +8,7 @@ services:
             args:
                 - DOCKER_REGISTRY=${DOCKER_REGISTRY}
                 - UCS_VERSION=${UCS_VERSION}
+                - UCSSCHOOL=${UCSSCHOOL}
         volumes:
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
         environment:
