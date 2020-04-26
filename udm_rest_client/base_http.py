@@ -923,12 +923,12 @@ class UdmObject(BaseObject):
                         "Waiting on move operation since %.2f seconds...",
                         operation_time,
                     )
-                continue
+                continue  # pragma: no cover
             if resp.status == 303:
                 operation_time = time.time() - start_time
                 if operation_time > 2:
                     # we have slept
-                    logger.debug(
+                    logger.debug(  # pragma: no cover
                         "Move operation finished after %.2f seconds.", operation_time,
                     )
                 move_progress_url = resp.headers["Location"]
