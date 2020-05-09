@@ -6,5 +6,5 @@ ldap3
 pytest
 pytest-asyncio
 pytest-runner
-requests
+requests==2.23.0
 ruamel.yaml
