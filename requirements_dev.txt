@@ -1,5 +1,5 @@
 black==19.10b0
-bumpversion
+bumpversion==0.5.3
 coverage
 flake8
 isort
