@@ -1,7 +1,7 @@
 attrs==19.3.0
 docker==4.2.0
 factory_boy==2.12.0
-faker
+faker==4.0.3
 ldap3
 pytest
 pytest-asyncio
