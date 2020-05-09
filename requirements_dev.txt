@@ -1,6 +1,6 @@
 black==19.10b0
 bumpversion==0.5.3
-coverage
+coverage==5.1
 flake8
 isort
 Sphinx
