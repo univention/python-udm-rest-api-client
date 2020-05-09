@@ -1,4 +1,4 @@
-attrs
+attrs==19.3.0
 docker==4.2.0
 factory_boy
 faker
