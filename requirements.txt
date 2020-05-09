@@ -1,5 +1,5 @@
 aiohttp==3.6.2
-async-property
+async-property==0.2.1
 click
 docker
 requests
