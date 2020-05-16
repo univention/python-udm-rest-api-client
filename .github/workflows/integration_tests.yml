@@ -3,17 +3,14 @@
 
 name: Integration tests
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: [3.6, 3.7, 3.8]
 
@@ -30,7 +27,7 @@ jobs:
         python -m pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt
         python -m pip list
     - name: Install Python package
-      run: python -m pip install .
+      run: python -m pip install -e .
     - name: start docker container
       run: make start-docker-container
     - name: install OpenAPI client
