@@ -8,6 +8,7 @@ import inspect
 import io
 import logging
 import re
+import sys
 import warnings
 from unittest.mock import MagicMock, patch
 from urllib.parse import unquote
@@ -38,6 +39,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 fake = faker.Faker()
+PY38 = sys.version_info >= (3, 8)
 
 
 def test_is_api_model():
@@ -177,11 +179,14 @@ async def test_openapi_method(udm_kwargs):
 async def test_get(random_name):
     val = random_name()
 
-    async def _func():
+    async def _func():  # pragma: no-cover-py-gte-38
         return val
 
     with patch.object(base_http.UdmModule, "_load_udm_object") as load_mock:
-        load_mock.return_value = _func()
+        if PY38:  # pragma: no-cover-py-lt-38
+            load_mock.return_value = val
+        else:  # pragma: no-cover-py-gte-38
+            load_mock.return_value = _func()
         foo = await base_http.UdmModule("users/user", MagicMock()).get("foo")
         assert foo == val
 
@@ -196,7 +201,7 @@ async def test_get_none():
 async def test_dn_property_encoder(random_name):
     val = random_name()
 
-    async def _func():
+    async def _func():  # pragma: no-cover-py-gte-38
         return val
 
     property_name = random_name()
@@ -204,7 +209,10 @@ async def test_dn_property_encoder(random_name):
     session = MagicMock()
     udm_module = "users/user"
     with patch.object(base_http.UdmModule, "_load_udm_object") as load_mock:
-        load_mock.return_value = _func()
+        if PY38:  # pragma: no-cover-py-lt-38
+            load_mock.return_value = val
+        else:  # pragma: no-cover-py-gte-38
+            load_mock.return_value = _func()
         str_prop = base_http.DnPropertyEncoder(
             property_name, dn, session, udm_module
         ).decode()
