@@ -59,7 +59,7 @@ That happens whenever the DN changes.
 The DN is created from the name of the object concatenated with the subtree in which the object is located.
 So both changing a users ``username`` (or a groups ``name``) attribute as well as changing an objects ``position`` attribute initiates a move.
 
-Behind the scenes the `Python UDM REST Client` will execute two modification on the UDM REST API: it will first apply the move and then any changes to the other properties in ``props``. But in the frontend it is sufficient to make the desired changes to the object and ``save()`` once::
+Behind the scenes the *Python UDM REST Client* will execute two modification on the UDM REST API: it will first apply the move and then any changes to the other properties in ``props``. But in the frontend it is sufficient to make the desired changes to the object and ``save()`` once::
 
     async with UDM(...) as udm:
         mod = udm.get("users/user")
@@ -68,4 +68,3 @@ Behind the scenes the `Python UDM REST Client` will execute two modification on 
         user_obj.props.firstname = "bar"
         await user_obj.save()
         print(user_obj.dn)  # new DN ("uid=foo,ou=office,...")
-

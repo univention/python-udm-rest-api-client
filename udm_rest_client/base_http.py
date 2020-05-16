@@ -146,7 +146,7 @@ def _serialize_obj(obj: Any) -> Any:
     raise ValueError(f"Dont know how to handle object of type {type(obj)!r}.")
 
 
-def _uri2module_dn(uri):  # type: (str) -> Tuple[str, str]
+def _uri2module_dn(uri: str) -> Tuple[str, str]:
     """
     Extract the UDM module name and the DN in a URI.
 
@@ -180,7 +180,6 @@ def _camel_case_name(udm_module_name: str) -> str:
     )
     while "_" in cc_name:
         index = cc_name.find("_")
-        assert index < len(cc_name) - 2
         cc_name = "{}{}{}".format(
             cc_name[:index],
             cc_name[index + 1].upper(),
@@ -408,9 +407,10 @@ class Session:
             # loop to allow retry in case of HTTP 503
             try:
                 async with self._client_task_limiter:
-                    api_model_obj, status, header = await meth(
-                        **kwargs
-                    )  # type: Union[ApiModel, Any], int, Dict[str, str]
+                    api_model_obj, status, header = await meth(**kwargs)
+                    api_model_obj = cast(Union[ApiModel, Any], api_model_obj)
+                    status = cast(int, status)
+                    header = cast(Dict[str, str], header)
                     res_type = api_model_obj.__class__.__name__
                     if res_type.endswith("List") and not hasattr(api_model_obj, "dn"):
                         # resource collection
@@ -1056,9 +1056,8 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         if not hasattr(openapi_client_udm, f"{camel_case_name}Api"):
             raise UnknownModuleType(f"Unknown module: {name!r}.", module_name=name)
         self.session: Session = cast(Session, self.connection)
-        self.session.openapi_class(
-            name
-        )  # noqa # side effect: check that UDM module `name` exists
+        # side effect: check that UDM module `name` exists:
+        self.session.openapi_class(name)
 
     async def new(self, superordinate: str = None) -> UdmObject:
         """

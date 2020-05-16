@@ -34,7 +34,7 @@ sys.path.insert(0, os.path.abspath(".."))
 # install 'openapi_client_udm' package from test-pypi to be able to build
 # Python module doc
 try:
-    import openapi_client_udm  # isort:skip
+    import openapi_client_udm  # isort:skip  # noqa: F401
 except ImportError:
     print("Installing 'openapi_client_udm' package from test-pypi...")
     pip_main(
@@ -48,7 +48,7 @@ except ImportError:
         ]
     )
 
-from udm_rest_client import __version__  # isort:skip
+from udm_rest_client import __version__  # isort:skip  # noqa: E402
 
 # -- General configuration ---------------------------------------------
 

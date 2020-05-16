@@ -1,5 +1,3 @@
-.. highlight:: shell
-
 ============
 Contributing
 ============
@@ -20,9 +18,9 @@ Report bugs at https://github.com/univention/python-udm-rest-api-client/issues.
 If you are reporting a bug, please include:
 
 * The operating system name and version and the Python version where the
-  `Python UDM REST Client` was used.
+  *Python UDM REST Client* was used.
 * The UCS version of the server and installed apps (the output of
-  ``univention-app info``) to which the `Python UDM REST Client` connected.
+  ``univention-app info``) to which the *Python UDM REST Client* connected.
 * Any details about your local setup that might be helpful in troubleshooting.
 * Detailed steps to reproduce the bug.
 
@@ -46,8 +44,8 @@ implement it.
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-`Python UDM REST Client` could always use more documentation, whether as part of the
-official `Python UDM REST Client` docs, in docstrings, or even on the web in blog posts,
+*Python UDM REST Client* could always use more documentation, whether as part of the
+official *Python UDM REST Client* docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
 Submit Feedback
@@ -65,9 +63,9 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `udm_rest_client` for local development.
+Ready to contribute? Here's how to set up *udm_rest_client* for local development.
 
-1. Fork the `python-udm-rest-api-client` repo on GitHub.
+1. Fork the ``python-udm-rest-api-client`` repo on GitHub.
 2. Clone your fork locally::
 
     $ git clone git@github.com:your_name_here/python-udm-rest-api-client.git

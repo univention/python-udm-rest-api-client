@@ -50,7 +50,7 @@ The ``UDM`` context manager opens and closes a HTTP session::
     >>> print(obj.props.username)
     foo
 
-There are more examples in the `docs`_ `usage` section.
+There are more examples in the `docs`_ *usage* section.
 
 If the SSL CA certificate is not available ``verify_ssl=False`` can be used in place of ``ssl_ca_cert=...``. Obviously that is not safe! The CA of any UCS server can always be downloaded from ``http://FQDN.OF.UCS/ucs-root-ca.crt``.
 
@@ -58,7 +58,7 @@ If the SSL CA certificate is not available ``verify_ssl=False`` can be used in p
 Installation
 ------------
 
-1. Install `Python UDM REST Client` via pip from `PyPI`_::
+1. Install *Python UDM REST Client* via pip from `PyPI`_::
 
     $ pip install udm-rest-client
 
@@ -74,9 +74,9 @@ default in newer versions of UCS and thus credentials are needed.
 
 **Important**:
 Whenever a new UDM module is installed in the domain, it is necessary to rerun ``update_openapi_client``.
-The new UDM module will otherwise not be available in the `Python UDM REST Client`.
+The new UDM module will otherwise not be available in the *Python UDM REST Client*.
 Very few apps (like UCS\@school and Open-Xchange) install new UDM modules.
-New extended attributes do `not` require to rebuild the OpenAPI client library.
+New extended attributes do *not* require to rebuild the OpenAPI client library.
 
 Tests
 -----
@@ -112,7 +112,7 @@ Logging
 Standard logging is used for tracking the libraries activity.
 To capture the log messages for this project, subscribe to a logger named ``udm_rest_client``.
 
-The `UDM REST API` on the UCS server logs into the file ``/var/log/univention/directory-manager-rest.log``.
+The *UDM REST API* on the UCS server logs into the file ``/var/log/univention/directory-manager-rest.log``.
 
 Repo permissions
 ----------------

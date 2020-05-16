@@ -10,7 +10,7 @@ import asyncio
 import functools
 import inspect
 import os
-import subprocess
+import subprocess  # nosec
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -84,7 +84,7 @@ def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
         print_error_and_exit(f"Connecting to the Docker daemon: {exc!s}")
     click.echo(f"Downloading/updating Docker image {DOCKER_IMAGE!r} (~130 MiB)...")
     docker_client.images.pull(DOCKER_IMAGE)
-    click.echo(f"Starting Docker container and generating Python code...")
+    click.echo("Starting Docker container and generating Python code...")
     docker_log = docker_client.containers.run(
         image=DOCKER_IMAGE,
         command=DOCKER_RUN_COMMAND,
@@ -102,7 +102,7 @@ def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
 
 
 def download_jar(target_path: Path):
-    click.echo(f"Downloading OpenAPI generator JAR (~19 MiB)...")
+    click.echo("Downloading OpenAPI generator JAR (~19 MiB)...")
     try:
         with requests.get(JAR_URL, stream=True) as resp, target_path.open("wb") as fp:
             if resp.status_code != 200:
@@ -128,8 +128,10 @@ def run_openapi_generator_local_java(
         schema=str(Path(target_dir, TARGET_SCHEMA_FILENAME)),
         target_dir=target_dir,
     ).split()
-    click.echo(f"Starting to generate Python code...")
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    click.echo("Starting to generate Python code...")
+    process = subprocess.Popen(  # nosec
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     stdout, stderr = process.communicate()
     if process.returncode:
         print_error_and_exit(stdout.decode())
