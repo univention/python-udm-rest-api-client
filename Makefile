@@ -31,7 +31,7 @@ CONTAINER_IP_CMD = UCS_REPOS="stable"; . docker/common.sh && docker_container_ip
 GET_OPENAPI_SCHEMA = UCS_REPOS="stable"; . docker/common.sh && get_openapi_schema "$(TEST_CONTAINER_NAME)"
 OPENAPI_BUILD_DIR  = /tmp/openapilibbuild
 OPENAPI_CLIENT_LIB_NAME = openapi-client-udm
-OPENAPI_CLIENT_LIB_IS_INSTALLED = pip show -q openapi-client-udm
+OPENAPI_CLIENT_LIB_IS_INSTALLED = python3 -m pip show -q openapi-client-udm
 DOCKER_IMG_FROM_REGISTRY = docker-test.software-univention.de/ucs-master-amd64-joined-udm-rest-api-only:stable-latest
 DOCKER_IMG_FROM_REGISTRY_EXISTS = UCS_REPOS="stable"; . docker/common.sh && docker_img_exists "$(DOCKER_IMG_FROM_REGISTRY)"
 DOCKER_IMG_EXISTS = UCS_REPOS="stable"; . docker/common.sh && docker_img_exists "$(DOCKER_IMG_FROM_REGISTRY)"
@@ -69,9 +69,11 @@ setup_devel_env: ## setup development environment (virtualenv)
 	@if [ -d venv ]; then \
 		echo "Directory 'venv' exists."; \
 	else \
-		/usr/bin/python3.7 -m virtualenv --python python3.7 venv; \
+		/usr/bin/python3.8 -m venv venv; \
 	fi; \
-	. venv/bin/activate && pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt; \
+	. venv/bin/activate && \
+	python3 -m pip install -U pip && \
+	python3 -m pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt; \
 	echo "==> Run '. venv/bin/activate' to activate virtual env."
 
 format: ## format source code with the current Python interpreter
@@ -226,7 +228,7 @@ pip-install-openapi-client-from-test-pypi:  ## install pre-built OpenAPI client 
 		echo "OpenAPI client lib ('$(OPENAPI_CLIENT_LIB_NAME)') is installed (see 'pip list')."; \
 	else \
 		make start-docker-container; \
-		pip install --compile --upgrade --index-url https://test.pypi.org/simple/ openapi-client-udm; \
+		python3 -m pip install --compile --upgrade --index-url https://test.pypi.org/simple/ openapi-client-udm; \
 	fi
 
 print-ucs-docker-ip: start-docker-container ## print IP address of UCS docker container (start if not running)
