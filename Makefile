@@ -218,7 +218,7 @@ pip-install-openapi-client:  ## build and install the OpenAPI client library int
 		echo "OpenAPI client lib ('$(OPENAPI_CLIENT_LIB_NAME)') is installed (see 'pip list')."; \
 	else \
 		make start-docker-container; \
-		./update_openapi_client --insecure `$(CONTAINER_IP_CMD)` --generator docker; \
+		./update_openapi_client --insecure `$(CONTAINER_IP_CMD)` --generator docker --username Administrator --password univention; \
 	fi
 
 pip-install-openapi-client-from-test-pypi:  ## install pre-built OpenAPI client library into currently active env
