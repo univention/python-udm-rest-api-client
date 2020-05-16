@@ -2,7 +2,7 @@
 Python UDM REST Client
 ======================
 
-|python| |license| |code style| |codecov| |docspassing| |travisci|
+|python| |license| |code style| |codecov| |docspassing| |travisci| |gh Code Linting| |gh Integration tests|
 
 Python library to interact with the Univention `UDM REST API`_, implements the interface of the `Python UDM API`_.
 
@@ -151,3 +151,7 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
     :target: https://udm-rest-client.readthedocs.io/en/latest/?badge=latest
 .. |travisci| image:: https://travis-ci.com/univention/python-udm-rest-api-client.svg?branch=master
     :target: https://travis-ci.com/univention/python-udm-rest-api-client
+.. |gh Code Linting| image:: https://github.com/univention/python-udm-rest-api-client/workflows/Code%20Linting/badge.svg
+    :target: https://github.com/univention/python-udm-rest-api-client/actions?query=workflow%3A%22Code+Linting%22
+.. |gh Integration tests| image:: https://github.com/univention/python-udm-rest-api-client/workflows/Integration%20tests/badge.svg
+    :target: https://github.com/univention/python-udm-rest-api-client/actions?query=workflow%3A%22Integration+tests%22
