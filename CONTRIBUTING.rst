@@ -101,7 +101,11 @@ Ready to contribute? Here's how to set up `udm_rest_client` for local developmen
     $ make test
     $ make test-all
 
-5.1 Fix format and coverage problems::
+5.1. Install pre-commit hooks
+
+    $ pre-commit install
+
+5.2 Fix format and coverage problems::
 
     $ make format
     $ make coverage-html
