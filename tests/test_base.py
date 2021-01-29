@@ -122,9 +122,7 @@ async def test_base_obj_props_setitem(user_created_via_http, udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_base_obj_props_iter_items_keys_values_len(
-    user_created_via_http, udm_kwargs
-):
+async def test_base_obj_props_iter_items_keys_values_len(user_created_via_http, udm_kwargs):
     dn, url, user = user_created_via_http()
 
     async with UDM(**udm_kwargs) as udm:

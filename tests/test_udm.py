@@ -67,10 +67,7 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
         logger.info("Successful LDAP login.")
         conn.search(
             search_base=base_dn,
-            search_filter="(&"
-            "(univentionObjectType=*)"
-            "(!(univentionObjectFlag=functional))"
-            ")",
+            search_filter="(&" "(univentionObjectType=*)" "(!(univentionObjectFlag=functional))" ")",
             attributes=["univentionObjectType", "univentionObjectFlag", "entryUUID"],
         )
     all_objs = {}
@@ -78,15 +75,11 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
         # test one object per udm module
         for result in conn.entries:
             object_type = result["univentionObjectType"].value
-            if (
-                object_type not in BAD_MODULE_NAMES and "://" not in result.entry_dn
-            ):  # Bug #50175
+            if object_type not in BAD_MODULE_NAMES and "://" not in result.entry_dn:  # Bug #50175
                 all_objs.setdefault(object_type, []).append(result)
         module_names = all_objs.keys()
         random.shuffle([str(m) for m in module_names])
-        logger.info(
-            "Reading %d objects of different UDM module types...", len(module_names)
-        )
+        logger.info("Reading %d objects of different UDM module types...", len(module_names))
         entries = [random.choice(all_objs[module_name]) for module_name in module_names]
         objs = await asyncio.gather(*(load_obj_by_dn(udm, entry) for entry in entries))
         for entry, obj in zip(entries, objs):
@@ -101,9 +94,7 @@ def test_version():
 async def test_modules_list(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         modules_list = await udm.modules_list()
-        assert set(modules_list).issuperset(
-            {"appcenter/app", "groups/group", "users/user"}
-        )
+        assert set(modules_list).issuperset({"appcenter/app", "groups/group", "users/user"})
 
 
 @pytest.mark.asyncio

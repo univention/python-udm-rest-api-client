@@ -52,22 +52,16 @@ def test_is_api_model():
 @pytest.mark.asyncio
 async def test_dn_property_encoder_checks_module_name(random_name):
     dn = random_name()
-    str_prop = base_http.DnPropertyEncoder(
-        random_name(), dn, random_name(), random_name()
-    ).decode()
+    str_prop = base_http.DnPropertyEncoder(random_name(), dn, random_name(), random_name()).decode()
     assert str(str_prop) == dn
     with pytest.raises(UnknownModuleType):
         await str_prop.obj
 
 
-@pytest.mark.parametrize(
-    "input_data,expected", [(None, None), ("", None)], ids=["None", "''"]
-)
+@pytest.mark.parametrize("input_data,expected", [(None, None), ("", None)], ids=["None", "''"])
 def test_dn_property_encoder_handles_empty_dn(random_name, input_data, expected):
     dn = input_data
-    str_prop = base_http.DnPropertyEncoder(
-        random_name(), dn, random_name(), random_name()
-    ).decode()
+    str_prop = base_http.DnPropertyEncoder(random_name(), dn, random_name(), random_name()).decode()
     assert str_prop is None
 
 
@@ -213,9 +207,7 @@ async def test_dn_property_encoder(random_name):
             load_mock.return_value = val
         else:  # pragma: no-cover-py-gte-38
             load_mock.return_value = _func()
-        str_prop = base_http.DnPropertyEncoder(
-            property_name, dn, session, udm_module
-        ).decode()
+        str_prop = base_http.DnPropertyEncoder(property_name, dn, session, udm_module).decode()
         assert hasattr(str_prop, "obj")
         obj = await str_prop.obj
         load_mock.assert_called_with(dn)
@@ -275,9 +267,7 @@ async def test_get_no_object(user_created_via_http, udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_dn_property_encoder_user_group_obj(
-    user_created_via_http, udm_kwargs, base_dn
-):
+async def test_dn_property_encoder_user_group_obj(user_created_via_http, udm_kwargs, base_dn):
     dn, url, user = user_created_via_http()
 
     async with UDM(**udm_kwargs) as udm:
@@ -560,9 +550,7 @@ async def test_move_and_modify_user(new_cn, user_created_via_http, udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_move_multiple_objects(
-    base_dn, new_cn, user_created_via_http, udm_kwargs
-):
+async def test_move_multiple_objects(base_dn, new_cn, user_created_via_http, udm_kwargs):
     top_cn_dn, top_cn_obj_url, top_cn_data = new_cn()
     old_cn_dn, old_cn_obj_url, old_cn_data = new_cn(position=top_cn_dn)
     cn_name = old_cn_data["properties"]["name"]
@@ -804,8 +792,7 @@ def test_session_warn_min_client_tasks():
             udm = UDM("A", "B", "https://foo.bar/baz", max_client_tasks=i)
             assert udm.session.max_client_tasks >= 4
             assert (
-                udm.session.openapi_client_config.connection_pool_maxsize
-                >= udm.session.max_client_tasks
+                udm.session.openapi_client_config.connection_pool_maxsize >= udm.session.max_client_tasks
             )
             if i < 4:
                 assert len(w) == 1
@@ -824,8 +811,7 @@ def test_session_warn_min_connection_pool_maxsize():
                 connection_pool_maxsize=i - 1,
             )
             assert (
-                udm.session.openapi_client_config.connection_pool_maxsize
-                >= udm.session.max_client_tasks
+                udm.session.openapi_client_config.connection_pool_maxsize >= udm.session.max_client_tasks
             )
             assert len(w) == 1
             assert issubclass(w[-1].category, base_http.BadSettingsWarning)
@@ -928,9 +914,7 @@ async def test_bad_module_name(udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_get_users_self_redirects_to_users_user(
-    udm_kwargs, test_server_configuration
-):
+async def test_get_users_self_redirects_to_users_user(udm_kwargs, test_server_configuration):
     administrator_dn = test_server_configuration.user_dn
 
     async with UDM(**udm_kwargs) as udm:

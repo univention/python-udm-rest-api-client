@@ -2,7 +2,9 @@
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
-import os, webbrowser, sys
+import os
+import sys
+import webbrowser
 
 try:
 	from urllib import pathname2url
@@ -14,7 +16,8 @@ endef
 export BROWSER_PYSCRIPT
 
 define PRINT_HELP_PYSCRIPT
-import re, sys
+import re
+import sys
 
 for line in sys.stdin:
 	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
@@ -76,23 +79,29 @@ setup_devel_env: ## setup development environment (virtualenv)
 	python3 -m pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt; \
 	echo "==> Run '. venv/bin/activate' to activate virtual env."
 
-format: ## format source code with the current Python interpreter
-	isort --apply --recursive docs setup.py tests udm_rest_client update_openapi_client
-	black --target-version py36 setup.py docs tests udm_rest_client update_openapi_client
+format: ## format source code (using pre-commits Python interpreter)
+	pre-commit run -a --hook-stage manual isort-edit
+	pre-commit run -a --hook-stage manual black-edit
 
 lint-isort:
-	isort --check-only --diff --recursive docs setup.py tests udm_rest_client update_openapi_client
+	pre-commit run -a isort
 
 lint-black:
-	black --check --target-version py36 docs setup.py tests udm_rest_client update_openapi_client
+	pre-commit run -a black
 
 lint-flake8:
-	flake8 --max-line-length=90 docs setup.py docs tests udm_rest_client update_openapi_client
+	pre-commit run -a flake8
 
-lint-coverage: .coverage
+lint-bandit:
+	pre-commit run -a bandit
+
+lint-coverage: .coverage ## check test coverage
 	coverage report --show-missing --fail-under=100
 
-lint: lint-isort lint-black lint-flake8 lint-coverage ## check style with the current Python interpreter
+lint-pre-commit:
+	pre-commit run -a
+
+lint: lint-pre-commit lint-coverage ## run all linters and check test coverage
 
 test: ## run tests with the current Python interpreter
 	@if [ -n "$$UCS_HOST" ] && [ -n "$$UCS_USERDN" ] && [ -n "$$UCS_PASSWORD" ]; then \
@@ -131,7 +140,9 @@ test-all: ## run tests with every supported Python version using tox
 	return $$rv
 
 .coverage: *.py docs/*.py udm_rest_client/*.py tests/*.py
-	@if [ -n "$$UCS_HOST" ] && [ -n "$$UCS_USERDN" ] && [ -n "$$UCS_PASSWORD" ]; then \
+	@if [ -e tests/test_server.yaml ]; then \
+		echo "Using configuration from tests/test_server.yaml."; \
+	elif [ -n "$$UCS_HOST" ] && [ -n "$$UCS_USERDN" ] && [ -n "$$UCS_PASSWORD" ]; then \
 		echo "Using UCS_HOST, UCS_USERDN and UCS_PASSWORD from env."; \
 		export UCS_HOST UCS_USERDN UCS_PASSWORD; \
 	else \

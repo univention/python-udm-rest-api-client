@@ -175,9 +175,7 @@ def _uri2module_dn(uri: str) -> Tuple[str, str]:
 
 
 def _camel_case_name(udm_module_name: str) -> str:
-    cc_name = "".join(
-        f"{s[0].upper()}{s[1:]}" for s in udm_module_name.strip("/_").split("/")
-    )
+    cc_name = "".join(f"{s[0].upper()}{s[1:]}" for s in udm_module_name.strip("/_").split("/"))
     while "_" in cc_name:
         index = cc_name.find("_")
         cc_name = "{}{}{}".format(
@@ -267,8 +265,7 @@ class Session:
         for k, v in kwargs.items():
             if not hasattr(self.openapi_client_config, k):
                 raise ConfigurationError(
-                    f"Unknown attribute {k!r} for an "
-                    f"'openapi_client_udm.Configuration' object."
+                    f"Unknown attribute {k!r} for an " f"'openapi_client_udm.Configuration' object."
                 )
             setattr(self.openapi_client_config, k, v)
         self._client: openapi_client_udm.ApiClient = None
@@ -284,9 +281,7 @@ class Session:
     async def close(self) -> None:
         if self._session:
             await self._session.close()
-            await asyncio.sleep(
-                0.1
-            )  # allow aiohttp SSL connections to close gracefully
+            await asyncio.sleep(0.1)  # allow aiohttp SSL connections to close gracefully
         self._session = None
         self._client = None
 
@@ -359,18 +354,14 @@ class Session:
         try:
             return getattr(openapi_client_udm, f"{camel_case_name}Api")
         except AttributeError:
-            raise UnknownModuleType(
-                f"Unknown module: {udm_module_name!r}.", module_name=udm_module_name,
-            )
+            raise UnknownModuleType(f"Unknown module: {udm_module_name!r}.", module_name=udm_module_name)
 
     def openapi_model(self, udm_module_name: str) -> ApiModel:
         camel_case_name = _camel_case_name(udm_module_name)
         try:
             return getattr(openapi_client_udm, camel_case_name)
         except AttributeError:
-            raise UnknownModuleType(
-                f"Unknown module: {udm_module_name!r}.", module_name=udm_module_name,
-            )
+            raise UnknownModuleType(f"Unknown module: {udm_module_name!r}.", module_name=udm_module_name)
 
     @lru_cache(maxsize=256)
     def openapi_method(self, udm_module_name: str, operation: str):
@@ -455,16 +446,14 @@ class Session:
                     ) from exc
                 if exc.status == 404:
                     raise NoObject(
-                        f"[HTTP 404] No {udm_module_name!r} object found for "
-                        f"arguments {kwargs!r}.",
+                        f"[HTTP 404] No {udm_module_name!r} object found for " f"arguments {kwargs!r}.",
                         dn=kwargs.get("dn"),
                         module_name=udm_module_name,
                     ) from exc
                 if exc.status == 503:  # pragma: no cover
                     if retries > 0:
                         logger.warning(
-                            "UDM REST API returned HTTP 503 (%s), retrying in %d "
-                            "seconds.",
+                            "UDM REST API returned HTTP 503 (%s), retrying in %d " "seconds.",
                             exc.reason,
                             retry_wait,
                         )
@@ -643,8 +632,7 @@ class UdmObject(BaseObject):
                 if hasattr(self._api_obj.policies, "attribute_map"):
                     attribute_map: Dict[str, str] = self._api_obj.policies.attribute_map
                     old_policies = dict(
-                        (attribute_map[k], v)
-                        for k, v in self._api_obj.policies.to_dict().items()
+                        (attribute_map[k], v) for k, v in self._api_obj.policies.to_dict().items()
                     )
                 else:
                     old_policies = self._api_obj.policies
@@ -663,15 +651,9 @@ class UdmObject(BaseObject):
                 diff_dict.pop(k, None)
         if self.dn:
             # 'move' as a separate step before 'modify'
-            if (
-                self.dn
-                and self._api_obj.position
-                and self._api_obj.position != self.position
-            ):
+            if self.dn and self._api_obj.position and self._api_obj.position != self.position:
                 # TODO: handle base64 encoded DNs
-                logger.info(
-                    "Moving {!r} to new position {!r}.".format(self, self.position)
-                )
+                logger.info("Moving {!r} to new position {!r}.".format(self, self.position))
                 api_obj = await self._move(self.position)
                 await self._copy_from_api_instance_obj(api_obj)
                 logger.info("Finished moving object, new DN: %r", self.dn)
@@ -681,9 +663,7 @@ class UdmObject(BaseObject):
                 logger.debug("No modifications for %r found, nothing to do.", self)
                 return self
             else:
-                logger.debug(
-                    "Modifications to %r found (ignore 'position'): %r", self, diff_dict
-                )
+                logger.debug("Modifications to %r found (ignore 'position'): %r", self, diff_dict)
             operation = "update"
             dn = self.dn
         else:
@@ -700,10 +680,7 @@ class UdmObject(BaseObject):
         if status in (201, 204):
             new_module_name, new_dn = _uri2module_dn(header["Location"])
             if new_module_name != self._udm_module.name:  # pragma: no cover
-                if not (
-                    self._udm_module.name == "users/self"
-                    and new_module_name == "users/user"
-                ):
+                if not (self._udm_module.name == "users/self" and new_module_name == "users/user"):
                     logger.warning(
                         "UDM REST API redirected to an object of a different "
                         "module. %r of %r returned the 'Location' %r which was"
@@ -739,18 +716,14 @@ class UdmObject(BaseObject):
         if not self.dn or not self._api_obj:
             raise NotYetSavedError()
         try:
-            await self._udm_module.session.call_openapi(
-                self._udm_module.name, "remove", dn=self.dn
-            )
+            await self._udm_module.session.call_openapi(self._udm_module.name, "remove", dn=self.dn)
         except NoObject as exc:
             logger.warning("When deleting %r: %s", self, exc)
         self._api_obj = None
         self._deleted = True
 
     @classmethod
-    async def _new_from_api_object(
-        cls, api_obj: ApiModel, udm_module: "UdmModule"
-    ) -> "UdmObject":
+    async def _new_from_api_object(cls, api_obj: ApiModel, udm_module: "UdmModule") -> "UdmObject":
         obj = cls()
         obj._api_obj = api_obj
         obj._udm_module = udm_module
@@ -770,10 +743,7 @@ class UdmObject(BaseObject):
         if hasattr(api_model_obj.options, "attribute_map"):
             #  openapi_client_udm.models.usersuser_options.UsersuserOptions etc
             attribute_map: Dict[str, str] = api_model_obj.options.attribute_map
-            options = dict(
-                (attribute_map[k], v)
-                for k, v in api_model_obj.options.to_dict().items()
-            )
+            options = dict((attribute_map[k], v) for k, v in api_model_obj.options.to_dict().items())
         else:
             # empty dict
             options = api_model_obj.options
@@ -781,22 +751,14 @@ class UdmObject(BaseObject):
         if hasattr(api_model_obj.policies, "attribute_map"):
             # openapi_client_udm.models.settingsmswmifilter_policies.SettingsmswmifilterPolicies
             attribute_map: Dict[str, str] = api_model_obj.policies.attribute_map
-            policies = dict(
-                (attribute_map[k], v)
-                for k, v in api_model_obj.policies.to_dict().items()
-            )
+            policies = dict((attribute_map[k], v) for k, v in api_model_obj.policies.to_dict().items())
         else:
             # empty dict
             policies = api_model_obj.policies
         self.policies = dict(
             (
                 p_type,
-                [
-                    DnPropertyEncoder(
-                        "__policies", dn, self._udm_module.session
-                    ).decode()
-                    for dn in dns
-                ],
+                [DnPropertyEncoder("__policies", dn, self._udm_module.session).decode() for dn in dns],
             )
             for p_type, dns in policies.items()
         )
@@ -812,10 +774,7 @@ class UdmObject(BaseObject):
                 and all(isinstance(x, str) for x in v)  # noqa: 503
                 and all(dn_regex.match(x) for x in v)  # noqa: 503
             ):
-                v = [
-                    DnPropertyEncoder(k, dn, self._udm_module.session).decode()
-                    for dn in v
-                ]
+                v = [DnPropertyEncoder(k, dn, self._udm_module.session).decode() for dn in v]
             elif isinstance(v, MutableSequence) or isinstance(v, MutableMapping):
                 # changing obj.property.x should not change obj._api_obj.property.x
                 v = copy.deepcopy(v)
@@ -862,9 +821,7 @@ class UdmObject(BaseObject):
                 self._udm_module.name, "modify", dn=self.dn, api_model_obj=self._api_obj
             )
         except APICommunicationError as exc:
-            raise MoveError(
-                f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}"
-            )
+            raise MoveError(f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}")
         if status != 201:  # pragma: no cover
             raise MoveError(
                 f"Error moving {self} to {position!r}:\nHTTP [{status}]\n"
@@ -873,19 +830,13 @@ class UdmObject(BaseObject):
                 module_name=self._udm_module.name,
             )
 
-        udm_api_response = await self._follow_move_redirects(
-            header["Location"], position
-        )
+        udm_api_response = await self._follow_move_redirects(header["Location"], position)
 
         api_obj_attrs = [
-            attr
-            for attr in self._api_obj.attribute_map.values()
-            if not attr.startswith("_")
+            attr for attr in self._api_obj.attribute_map.values() if not attr.startswith("_")
         ]  # ["dn", ..., "properties", "objectType"]
         if all(attr in udm_api_response for attr in api_obj_attrs):
-            openapi_model_cls = self._udm_module.session.openapi_model(
-                udm_api_response["objectType"]
-            )
+            openapi_model_cls = self._udm_module.session.openapi_model(udm_api_response["objectType"])
             api_model_kwargs = dict(
                 (k, udm_api_response[v])
                 for k, v in openapi_model_cls.attribute_map.items()
@@ -893,9 +844,7 @@ class UdmObject(BaseObject):
             )
             return openapi_model_cls(**api_model_kwargs)
 
-    async def _follow_move_redirects(
-        self, move_progress_url: str, position: str
-    ) -> Dict[str, Any]:
+    async def _follow_move_redirects(self, move_progress_url: str, position: str) -> Dict[str, Any]:
         operation_timeout = 300  # TODO: make configurable?
         start_time = time.time()
         while time.time() - start_time < operation_timeout:
@@ -916,9 +865,7 @@ class UdmObject(BaseObject):
                 await asyncio.sleep(sleep_time)
                 # report that we're alive, when moving takes more than 2s
                 operation_time = time.time() - start_time
-                if (
-                    operation_time > 2 and int(operation_time) % 2 == 0
-                ):  # pragma: no cover
+                if operation_time > 2 and int(operation_time) % 2 == 0:  # pragma: no cover
                     logger.debug(
                         "Waiting on move operation since %.2f seconds...",
                         operation_time,
@@ -929,12 +876,10 @@ class UdmObject(BaseObject):
                 if operation_time > 2:
                     # we have slept
                     logger.debug(  # pragma: no cover
-                        "Move operation finished after %.2f seconds.", operation_time,
+                        "Move operation finished after %.2f seconds.", operation_time
                     )
                 move_progress_url = resp.headers["Location"]
-                resp = await self._udm_module.session.get_json(
-                    move_progress_url, allow_redirects=True
-                )
+                resp = await self._udm_module.session.get_json(move_progress_url, allow_redirects=True)
                 break
             raise ApiException(
                 f"UDM REST API returned status {resp.status}, headers: {resp.headers!r} "
@@ -942,8 +887,7 @@ class UdmObject(BaseObject):
             )  # pragma: no cover
         else:
             raise MoveError(
-                f"Moving {self} to {position!r} did not complete in "
-                f"{operation_timeout} seconds.",
+                f"Moving {self} to {position!r} did not complete in " f"{operation_timeout} seconds.",
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )  # pragma: no cover
@@ -1072,9 +1016,7 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         if self.name not in self._new_object_templates:
             # TODO: turn superordinate into an ApiModel object for _load_udm_object()
             # await self._get_api_object(superordinate / superordinate.dn) ?
-            self._new_object_templates[self.name] = await self._load_udm_object(
-                "", superordinate
-            )
+            self._new_object_templates[self.name] = await self._load_udm_object("", superordinate)
         new_obj = copy.deepcopy(self._new_object_templates[self.name])
         new_obj._udm_module = self
         return new_obj
@@ -1111,14 +1053,10 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
             params["position"] = base
         if scope:
             if scope not in ("sub", "base", "one"):
-                raise ValueError(
-                    "Argument 'scope' must be one of 'sub', base' or 'one'."
-                )
+                raise ValueError("Argument 'scope' must be one of 'sub', base' or 'one'.")
             params["scope"] = scope
 
-        api_model_objs, _, _ = await self.session.call_openapi(
-            self.name, "search", **params
-        )
+        api_model_objs, _, _ = await self.session.call_openapi(self.name, "search", **params)
         for obj in api_model_objs:
             yield await self._load_udm_object(api_obj=obj)
 
@@ -1138,14 +1076,10 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
             dn = None
         else:
             operation = "get"
-        api_model_obj, status, header = await self.session.call_openapi(
-            self.name, operation, dn=dn
-        )
+        api_model_obj, status, header = await self.session.call_openapi(self.name, operation, dn=dn)
         return api_model_obj
 
-    async def _load_udm_object(
-        self, dn: str = None, api_obj: ApiModel = None
-    ) -> UdmObject:
+    async def _load_udm_object(self, dn: str = None, api_obj: ApiModel = None) -> UdmObject:
         """
         UdmObject factory.
 
@@ -1169,9 +1103,7 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
             # probably only happens with users/self
             udm_module = UdmModule(api_obj.object_type, self.session)
 
-        return await self._udm_object_class._new_from_api_object(
-            api_obj=api_obj, udm_module=udm_module
-        )
+        return await self._udm_object_class._new_from_api_object(api_obj=api_obj, udm_module=udm_module)
 
 
 class DnPropertyEncoder:
@@ -1196,14 +1128,10 @@ class DnPropertyEncoder:
 
         @async_property
         async def obj(self) -> UdmObject:
-            udm_module_name = (
-                self._udm_module_name or await self._session.get_object_type(self._dn)
-            )
+            udm_module_name = self._udm_module_name or await self._session.get_object_type(self._dn)
             return await UdmModule(udm_module_name, self._session).get(self._dn)
 
-    def __init__(
-        self, property_name: str, dn: str, session: Session, udm_module_name: str = None
-    ):
+    def __init__(self, property_name: str, dn: str, session: Session, udm_module_name: str = None):
         self.property_name = property_name
         self.dn = dn
         self.session = session

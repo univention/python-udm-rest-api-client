@@ -29,15 +29,19 @@ if not inspect.isfunction(pip_main):
     pip_main = pip_main.main
 
 
-DOCKER_IMAGE = "openapitools/openapi-generator-cli:latest"
+DOCKER_IMAGE = "openapitools/openapi-generator-cli:latest-release"
 JAR_URL = "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.3/openapi-generator-cli-4.2.3.jar"
 TARGET_PYTHON_PACKAGE_NAME = "openapi_client_udm"
 TARGET_SCHEMA_FILENAME = "udm_openapi.json"
 OPENAPI_GENERATE_COMMAND_COMMON = (
-    f"generate -g python --library asyncio --package-name {TARGET_PYTHON_PACKAGE_NAME}"
+    f"generate -g python-legacy --library asyncio --package-name {TARGET_PYTHON_PACKAGE_NAME}"
 )
-DOCKER_RUN_COMMAND = f"{OPENAPI_GENERATE_COMMAND_COMMON} -i /local/{TARGET_SCHEMA_FILENAME} -o /local/python"
-JAVA_COMPILE_CMD = f"java -jar {{jar}} {OPENAPI_GENERATE_COMMAND_COMMON} -i {{schema}} -o {{target_dir}}/python"
+DOCKER_RUN_COMMAND = (
+    f"{OPENAPI_GENERATE_COMMAND_COMMON} -i /local/{TARGET_SCHEMA_FILENAME} -o /local/python"
+)
+JAVA_COMPILE_CMD = (
+    f"java -jar {{jar}} {OPENAPI_GENERATE_COMMAND_COMMON} -i {{schema}} -o {{target_dir}}/python"
+)
 OPENAPI_SCHEMA_URL = "https://{host}/univention/udm/openapi.json"
 
 
@@ -82,16 +86,24 @@ def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
         )
     except requests.ConnectionError as exc:
         print_error_and_exit(f"Connecting to the Docker daemon: {exc!s}")
-    click.echo(f"Downloading/updating Docker image {DOCKER_IMAGE!r} (~130 MiB)...")
+    click.echo(f"Downloading/updating Docker image {DOCKER_IMAGE!r} (~136 MiB)...")
     docker_client.images.pull(DOCKER_IMAGE)
     click.echo("Starting Docker container and generating Python code...")
-    docker_log = docker_client.containers.run(
-        image=DOCKER_IMAGE,
-        command=DOCKER_RUN_COMMAND,
-        auto_remove=True,
-        user=os.getuid(),
-        volumes={target_dir: {"bind": "/local", "mode": "rw"}},
-    )
+    try:
+        # would have liked to append '--verbose' to DOCKER_RUN_COMMAND, but then the JVM will:
+        # java.lang.OutOfMemoryError: Java heap space
+        docker_log = docker_client.containers.run(
+            image=DOCKER_IMAGE,
+            command=DOCKER_RUN_COMMAND,
+            auto_remove=True,
+            user=os.getuid(),
+            volumes={target_dir: {"bind": "/local", "mode": "rw"}},
+        )
+    except docker.errors.ContainerError as exc:
+        msg = f"Error in container: {exc!s}"
+        if exc.stderr:
+            f"{msg}\n{exc.stderr!s}"
+        print_error_and_exit(msg)
     if not quiet:
         click.echo(docker_log)
     if keep_image:
@@ -117,9 +129,7 @@ def download_jar(target_path: Path):
         print_error_and_exit(str(exc))
 
 
-def run_openapi_generator_local_java(
-    target_dir: str, quiet: bool, jar_path: Path = None
-):
+def run_openapi_generator_local_java(target_dir: str, quiet: bool, jar_path: Path = None):
     if not jar_path:
         jar_path = Path(target_dir, "openapi-generator.jar")
         download_jar(jar_path)
@@ -129,9 +139,7 @@ def run_openapi_generator_local_java(
         target_dir=target_dir,
     ).split()
     click.echo("Starting to generate Python code...")
-    process = subprocess.Popen(  # nosec
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-    )
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)  # nosec
     stdout, stderr = process.communicate()
     if process.returncode:
         print_error_and_exit(stdout.decode())
@@ -191,8 +199,7 @@ def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str
 @click.option(
     "--keep-image/--dont-keep-image",
     default=False,
-    help="Whether to keep the OpenAPI Generator Docker image (when '--generator"
-    " docker' is used).",
+    help="Whether to keep the OpenAPI Generator Docker image (when '--generator" " docker' is used).",
 )
 @click.option(
     "--secure/--insecure",
@@ -209,12 +216,8 @@ def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str
     default=True,
     help="Whether to install into a system or the users home directory",
 )
-@click.option(
-    "--username", help="The username to authenticate against the UDM REST API."
-)
-@click.option(
-    "--password", help="The password to authenticate against the UDM REST API"
-)
+@click.option("--username", help="The username to authenticate against the UDM REST API.")
+@click.option("--password", help="The password to authenticate against the UDM REST API.")
 @coro
 async def update_openapi_client(
     host: str,
@@ -230,9 +233,7 @@ async def update_openapi_client(
     if not host:
         print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
     if jar and generator != "java":
-        print_error_and_exit(
-            "The --jar option can only be used together with '--generator java'."
-        )
+        print_error_and_exit("The --jar option can only be used together with '--generator java'.")
     if jar:
         jar = Path(jar)
     txt = get_openapi_schema(host, username, password, secure)
@@ -252,9 +253,7 @@ async def update_openapi_client(
             run_openapi_generator_local_java(temp_dir, quiet, jar)
         click.echo("Installing package via pip...")
         if system:
-            pip_main(
-                ["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))]
-            )
+            pip_main(["install", "--compile", "--upgrade", str(Path(temp_dir, "python/"))])
         else:
             pip_main(
                 [

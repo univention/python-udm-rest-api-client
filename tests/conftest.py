@@ -35,7 +35,7 @@ except ImportError as exc:  # pragma: no cover
 
 
 TEST_DOCKER_CONTAINER_NAME = "udm_rest_only"
-TEST_SERVER_YAML_FILENAME = Path("test_server.yaml")
+TEST_SERVER_YAML_FILENAME = Path(__file__).parent / "test_server.yaml"
 UDMServer = namedtuple("UDMServer", ["host", "username", "user_dn", "password"])
 fake = faker.Faker()
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class NoTestServerConfig(Exception):
     ...
 
 
-def running_test_container() -> UDMServer:
+def running_test_container() -> UDMServer:  # pragma: no cover
     """
     :raises: ContainerIpUnknown
     :raises: ContainerNotFound
@@ -158,19 +158,19 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # pragma: no
     print(f"Trying to load test server config from {TEST_SERVER_YAML_FILENAME}...")
     try:
         res = load_test_server_yaml()
+        print("Testing configuration in YAML file...")
         _test_a_server_configuration(res)
     except FileNotFoundError:
         print(f"File not found: {TEST_SERVER_YAML_FILENAME}.")
     except TypeError as exc:
-        raise BadTestServerConfig(
-            f"Error in {TEST_SERVER_YAML_FILENAME}: {exc!s}"
-        ) from exc
+        raise BadTestServerConfig(f"Error in {TEST_SERVER_YAML_FILENAME}: {exc!s}") from exc
     except udm_rest_client.exceptions.APICommunicationError as exc:
         raise BadTestServerConfig(
             f"Error connecting to test server using credentials "
             f"from {TEST_SERVER_YAML_FILENAME}: [{exc.status}] {exc.reason}"
         ) from exc
     else:
+        print("OK: Using configuration in YAML file.")
         return res
 
     print(f"Trying to use running Docker container {TEST_DOCKER_CONTAINER_NAME!r}...")
@@ -201,9 +201,7 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # pragma: no
     except (IndexError, KeyError):
         print("Test server config not found in environment.")
     except LDAPInvalidDnError as exc:
-        raise BadTestServerConfig(
-            f"Invalid DN in environment variable 'UCS_USERDN': {exc!s}"
-        )
+        raise BadTestServerConfig(f"Invalid DN in environment variable 'UCS_USERDN': {exc!s}")
     except udm_rest_client.exceptions.APICommunicationError as exc:
         raise BadTestServerConfig(
             f"Error connecting to test server using credentials from the "
@@ -215,9 +213,7 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # pragma: no
     raise NoTestServerConfig("No test server configuration found.")
 
 
-@attr.s(
-    auto_attribs=True
-)  # using attr instead of dataclasses to remove dependency on Python 3.7+
+@attr.s(auto_attribs=True)  # using attr instead of dataclasses to remove dependency on Python 3.7+
 class UserProperties:
     username: str
     password: str
@@ -233,7 +229,7 @@ class UserPropertiesFactory(factory.Factory):
         model = UserProperties
 
     username = factory.LazyFunction(
-        lambda: f"{factory.Faker('first_name').generate()}.{factory.Faker('last_name').generate()}".lower()  # noqa: E501
+        lambda: f"{fake.first_name()}.{fake.last_name()}".lower()  # noqa: E501
     )
     password = factory.Faker(
         "password",
@@ -246,9 +242,7 @@ class UserPropertiesFactory(factory.Factory):
     firstname = factory.Faker("first_name")
     lastname = factory.Faker("last_name")
     birthday = factory.LazyFunction(
-        lambda: factory.Faker("date_of_birth", minimum_age=6, maximum_age=65)
-        .generate()
-        .strftime("%Y-%m-%d")
+        lambda: fake.date_of_birth(minimum_age=6, maximum_age=65).strftime("%Y-%m-%d")
     )
     disabled = False
     #  groups = []
@@ -431,9 +425,7 @@ def http_headers_write():
 
 
 @pytest.fixture
-def user_created_via_http(
-    http_headers_write, udm_kwargs, user_resource_kwargs, delete_user_via_http
-):
+def user_created_via_http(http_headers_write, udm_kwargs, user_resource_kwargs, delete_user_via_http):
     created_user_dns = []
     auth = (udm_kwargs["username"], udm_kwargs["password"])
     url = f"{udm_kwargs['url']}/users/user/"
@@ -446,9 +438,7 @@ def user_created_via_http(
         data = user_resource_kwargs()
         data.update(user_kwargs)
 
-        resp = requests.post(
-            url, headers=http_headers_write, json=data, auth=auth, verify=verify_ssl
-        )
+        resp = requests.post(url, headers=http_headers_write, json=data, auth=auth, verify=verify_ssl)
         print(resp.reason)
         try:
             print(resp.json())
@@ -472,11 +462,7 @@ def modify_user_via_http(base_dn, http_headers_write, udm_kwargs):
 
     def _func(dn: str, user: User) -> None:
         url = f"{udm_kwargs['url']}/users/user/{dn}"
-        data = dict(
-            (k, v)
-            for k, v in attr.asdict(user).items()
-            if v and k not in ("dn", "uri", "uuid")
-        )
+        data = dict((k, v) for k, v in attr.asdict(user).items() if v and k not in ("dn", "uri", "uuid"))
         properties = data.pop("props", {})
         data["properties"] = dict((k, v) for k, v in properties.items() if v)
         if udm_kwargs.get("verify_ssl", True):
@@ -484,9 +470,7 @@ def modify_user_via_http(base_dn, http_headers_write, udm_kwargs):
         else:
             verify_ssl = False
 
-        resp = requests.patch(
-            url, headers=http_headers_write, json=data, auth=auth, verify=verify_ssl
-        )
+        resp = requests.patch(url, headers=http_headers_write, json=data, auth=auth, verify=verify_ssl)
         assert resp.status_code == 204
 
     return _func
@@ -502,9 +486,7 @@ def delete_user_via_http(base_dn, http_headers_read, udm_kwargs):
 
     def _func(dn: str) -> None:
         url = f"{udm_kwargs['url']}/users/user/{dn}"
-        resp = requests.delete(
-            url, headers=http_headers_read, auth=auth, verify=verify_ssl
-        )
+        resp = requests.delete(url, headers=http_headers_read, auth=auth, verify=verify_ssl)
         assert resp.status_code in (204, 404)
 
     return _func
@@ -575,9 +557,7 @@ def new_cn(base_dn, http_headers_read, http_headers_write, udm_kwargs):
     def _func(**cn_kwargs) -> Tuple[str, str, Dict[str, str]]:
         data = {"properties": {"name": fake.city()}, "position": base_dn}
         data.update(cn_kwargs)
-        resp = requests.post(
-            url, headers=http_headers_write, json=data, auth=auth, verify=verify_ssl
-        )
+        resp = requests.post(url, headers=http_headers_write, json=data, auth=auth, verify=verify_ssl)
         print(resp.reason)
         try:
             print(resp.json())
@@ -594,7 +574,5 @@ def new_cn(base_dn, http_headers_read, http_headers_write, udm_kwargs):
 
     for dn in created_cn_dns:
         url = f"{url}{dn}"
-        resp = requests.delete(
-            url, headers=http_headers_read, auth=auth, verify=verify_ssl
-        )
+        resp = requests.delete(url, headers=http_headers_read, auth=auth, verify=verify_ssl)
         assert resp.status_code in (204, 404)

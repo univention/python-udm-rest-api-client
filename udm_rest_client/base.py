@@ -47,9 +47,7 @@ class BaseObjectProperties(collections.abc.Mapping, collections.abc.Iterable):
     def __contains__(self, item) -> bool:
         return hasattr(self, item)
 
-    def __deepcopy__(
-        self, memo: Dict[int, "BaseObjectProperties"]
-    ) -> "BaseObjectProperties":
+    def __deepcopy__(self, memo: Dict[int, "BaseObjectProperties"]) -> "BaseObjectProperties":
         id_self = id(self)
         if not memo.get(id_self):
             memo[id_self] = self.__class__(self._udm_obj)
@@ -74,9 +72,7 @@ class BaseObjectProperties(collections.abc.Mapping, collections.abc.Iterable):
         try:
             return getattr(self, key)
         except AttributeError as exc:
-            raise KeyError(
-                f"{self.__class__.__name__} does not have key {key!r}."
-            ) from exc
+            raise KeyError(f"{self.__class__.__name__} does not have key {key!r}.") from exc
 
     def __iter__(self) -> Iterator[str]:
         return (k for k in self.__dict__.keys() if not str(k).startswith("_"))
@@ -87,7 +83,7 @@ class BaseObjectProperties(collections.abc.Mapping, collections.abc.Iterable):
     def __repr__(self) -> str:
         return "{}({})".format(
             self.__class__.__name__,
-            pprint.pformat(dict((k, v) for k, v in self.items()), indent=2,),
+            pprint.pformat(dict((k, v) for k, v in self.items()), indent=2),
         )
 
     def __setitem__(self, key, value):
@@ -228,15 +224,11 @@ class BaseModuleMetadata:
         return "{}({})".format(
             self.__class__.__name__,
             ", ".join(
-                "{}={!r}".format(k, v)
-                for k, v in self.__dict__.items()
-                if not str(k).startswith("_")
+                "{}={!r}".format(k, v) for k, v in self.__dict__.items() if not str(k).startswith("_")
             ),
         )
 
-    def instance(
-        self, udm_module: "BaseModule", api_version: int
-    ) -> "BaseModuleMetadata":
+    def instance(self, udm_module: "BaseModule", api_version: int) -> "BaseModuleMetadata":
         cpy = copy.deepcopy(self)
         cpy._udm_module = udm_module
         cpy.used_api_version = api_version
@@ -372,9 +364,7 @@ class BaseModule(metaclass=BaseModuleMeta):
         """
         raise NotImplementedError()
 
-    def search(
-        self, filter_s: str = "", base: str = "", scope: str = "sub"
-    ) -> Iterator[BaseObject]:
+    def search(self, filter_s: str = "", base: str = "", scope: str = "sub") -> Iterator[BaseObject]:
         """
         Get all UDM objects from LDAP that match the given filter.
 

@@ -1,9 +1,9 @@
-attrs==19.3.0
+attrs==20.3.0
 coverage-conditional-plugin==0.3.1
-factory_boy==2.12.0
-faker==4.1.1
-ldap3==2.7
-pytest==5.4.3
+factory_boy==3.2.0
+Faker==5.8.0
+ldap3==2.9
+pytest==6.2.2
 pytest-asyncio==0.14.0
 pytest-runner==5.2
-ruamel.yaml==0.16.10
+ruamel.yaml==0.16.12

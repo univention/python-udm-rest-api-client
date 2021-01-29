@@ -63,9 +63,7 @@ class CreateError(UdmError):
 
 class DeletedError(UdmError):
     def __init__(self, msg: str = None, dn: str = None, module_name: str = None):
-        msg = msg or "Object{} has already been deleted.".format(
-            " {!r}".format(dn) if dn else ""
-        )
+        msg = msg or "Object{} has already been deleted.".format(" {!r}".format(dn) if dn else "")
         super().__init__(msg, dn, module_name)
 
 
