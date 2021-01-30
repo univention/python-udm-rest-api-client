@@ -624,10 +624,6 @@ class UdmObject(BaseObject):
                         diff_dict.setdefault("properties", {})[prop] = value
             elif k == "superordinate" and not hasattr(old_obj, "superordinate"):
                 continue
-            elif k == "options":
-                # When Bug #50178 has been fixed, change 'options' to be a dict
-                # in the Python API.
-                diff_dict[k] = dict((option, True) for option in v)
             elif k == "policies" and v:
                 if hasattr(self._api_obj.policies, "attribute_map"):
                     attribute_map: Dict[str, str] = self._api_obj.policies.attribute_map
@@ -743,11 +739,12 @@ class UdmObject(BaseObject):
         if hasattr(api_model_obj.options, "attribute_map"):
             #  openapi_client_udm.models.usersuser_options.UsersuserOptions etc
             attribute_map: Dict[str, str] = api_model_obj.options.attribute_map
-            options = dict((attribute_map[k], v) for k, v in api_model_obj.options.to_dict().items())
+            self.options = dict(
+                (attribute_map[k], v) for k, v in api_model_obj.options.to_dict().items()
+            )
         else:
             # empty dict
-            options = api_model_obj.options
-        self.options = [k for k, v in options.items() if v]
+            self.options = api_model_obj.options
         if hasattr(api_model_obj.policies, "attribute_map"):
             # openapi_client_udm.models.settingsmswmifilter_policies.SettingsmswmifilterPolicies
             attribute_map: Dict[str, str] = api_model_obj.policies.attribute_map

@@ -82,10 +82,20 @@ async def test_deepcopy_object(user_created_via_http, udm_kwargs):
     obj2 = copy.deepcopy(obj)
     assert isinstance(obj, base_http.UdmObject)
     assert isinstance(obj2, base_http.UdmObject)
-    for k in ("dn", "options", "policies", "position", "superordinate"):
-        assert getattr(obj, k) == getattr(obj2, k)
+    assert isinstance(obj.dn, str)
+    assert isinstance(obj2.dn, str)
+    assert isinstance(obj.options, dict)
+    assert isinstance(obj2.options, dict)
+    assert isinstance(obj.policies, dict)
+    assert isinstance(obj2.policies, dict)
+    assert isinstance(obj.position, str)
+    assert isinstance(obj2.position, str)
     assert isinstance(obj.props, base_http.UdmObjectProperties)
     assert isinstance(obj2.props, base_http.UdmObjectProperties)
+    assert isinstance(obj.superordinate, (str, type(None)))
+    assert isinstance(obj2.superordinate, (str, type(None)))
+    for k in ("dn", "options", "policies", "position", "superordinate"):
+        assert getattr(obj, k) == getattr(obj2, k)
     for k, v in obj.props._to_dict().items():
         assert getattr(obj.props, k) == getattr(obj2.props, k)
 
@@ -441,7 +451,7 @@ async def test_add_attribute_of_previously_deactivated_option(
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("shares/share")
         obj = await mod.new()
-        obj.options = ["samba"]
+        obj.options = {"samba": True}
         obj.props.name = fake.first_name()
         obj.props.host = "file.example.com"
         obj.props.path = f"/home/share{fake.first_name()}"
@@ -449,7 +459,7 @@ async def test_add_attribute_of_previously_deactivated_option(
 
         obj_new = await mod.get(obj.dn)
         assert obj_new.props.name == obj.props.name
-        if "nfs" in obj.options:
+        if obj.options.get("nfs") is True:
             # handle http://forge.univention.org/bugzilla/show_bug.cgi?id=50974
             print("NFS enabled by default :/")
             import requests
@@ -473,16 +483,16 @@ async def test_add_attribute_of_previously_deactivated_option(
                 print(resp.text)
             assert resp.status_code in (201, 204)
             obj_new = await mod.get(obj.dn)
-        assert "samba" in obj_new.options
-        assert "nfs" not in obj_new.options
+        assert obj_new.options.get("samba") is True
+        assert obj_new.options.get("nfs") is False
         assert not hasattr(obj_new.props, "root_squash")
 
-        obj_new.options.append("nfs")
+        obj_new.options["nfs"] = True
         obj_new.props.root_squash = True
         await obj_new.save()
 
         obj_new2 = await mod.get(obj_new.dn)
-        assert "nfs" in obj_new2.options
+        assert obj_new2.options.get("nfs") is True
         assert hasattr(obj_new2.props, "root_squash")
         assert obj.props.root_squash is True
 

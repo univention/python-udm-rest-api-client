@@ -31,9 +31,9 @@ async def test_base_obj_eq(user_created_via_http, udm_kwargs):
         assert obj == obj2
 
     opt = fake.pystr()
-    obj.options.append(opt)
+    obj.options[opt] = fake.pystr()
     assert obj != obj2
-    obj.options.remove(opt)
+    del obj.options[opt]
     assert obj == obj2
 
     attri = "firstname"

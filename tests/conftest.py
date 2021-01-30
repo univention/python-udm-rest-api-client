@@ -281,7 +281,7 @@ class UsersUserUdmObjectFactory(factory.Factory):
     dn = ""
     uri = factory.Faker("url")
     uuid = factory.Faker("uuid4")
-    options = factory.List([factory.Faker("user_name")])
+    options = factory.Dict({"default": True})
     policies = factory.List([factory.Faker("user_name")])
     superordinate = None
     position = ""

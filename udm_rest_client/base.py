@@ -33,7 +33,7 @@ Base classes for (simplified) UDM modules and objects.
 import collections
 import copy
 import pprint
-from typing import Any, Dict, Iterable, Iterator, List, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, Tuple, Union
 
 LdapMapping = collections.namedtuple("LdapMapping", ("ldap2udm", "udm2ldap"))
 
@@ -149,9 +149,7 @@ class BaseObject:
         """
         self.dn: str = ""
         self.props: BaseObjectProperties = None
-        self.options: List[
-            str
-        ] = []  # When Bug #50178 has been fixed, change 'options' to be a dict in the Python API.
+        self.options: Dict[str:bool] = {}
         self.policies: Dict[str, str] = {}
         self.position: str = ""
         self.superordinate: str = None
@@ -160,11 +158,9 @@ class BaseObject:
     def __eq__(self, other: "BaseObject") -> bool:
         if self._udm_module.name != other._udm_module.name:
             return False
-        for attr in ("dn", "props", "policies", "position", "superordinate"):
+        for attr in ("dn", "options", "props", "policies", "position", "superordinate"):
             if getattr(self, attr) != getattr(other, attr):
                 return False
-        if set(self.options) != set(other.options):
-            return False
         return True
 
     def __repr__(self) -> str:
