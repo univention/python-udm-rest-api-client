@@ -68,3 +68,40 @@ Behind the scenes the *Python UDM REST Client* will execute two modification on 
         user_obj.props.firstname = "bar"
         await user_obj.save()
         print(user_obj.dn)  # new DN ("uid=foo,ou=office,...")
+
+Options
+-------
+
+The ``options`` of an UDM object correspond approximately to LDAP objectClasses.
+They are used to enable/disable attributes of LDAP objects and with that features.
+For example UDM ``shares/share`` objects support automatic creation of CIFS and NFS shares.
+By default shares for both protocols will be created.
+To disable the creation of an NFS share, the ``option`` has to be disabled.
+
+.. note::
+    In version 1.0.0 there was a **breaking API change**: The ``options`` attribute of UDM objects is now a *dictionary*. It mirrors the UDM REST APIs ``options`` attribute value. Before it was a *list*, which did not allow to disable default options.
+
+The following example code removes the NFS feature from a share object::
+
+    async with UDM(...) as udm:
+        mod = udm.get("shares/share")
+        share_obj = await mod.get("cn=documents,cn=shares,...")
+        print(share_obj.options)
+        {'samba': True, 'nfs': True}
+        print(share_obj.props)
+        UdmObjectProperties({
+            ...
+            'nfs_hosts': [],
+            'root_squash': True,
+            'sambaBlockSize': None,
+            ...})
+        share_obj.options["nfs"] = False
+        await share_obj.save()
+
+        print(share_obj.options)
+        {'samba': True, 'nfs': False}
+        print(share_obj.props)
+        UdmObjectProperties({
+            # no more NFS properties
+            'sambaBlockSize': None,
+            ...})

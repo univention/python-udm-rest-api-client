@@ -48,12 +48,10 @@ repos:
     hooks:
     -   id: black
         entry: black --check --diff --config .black
-        language_version: python3.7
     -   id: black
         alias: black-edit
         stages: [manual]
         entry: black --config .black
-        language_version: python3.7
 -   repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.4
     hooks:
@@ -64,4 +62,4 @@ repos:
     -   id: bandit
         entry: bandit -x tests
 default_language_version:
-    python: python3.7
+    python: python3

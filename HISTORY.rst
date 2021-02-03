@@ -2,7 +2,7 @@
 History
 =======
 
-0.5.0 (2021-01-29)
+1.0.0 (2021-02-03)
 ------------------
 
 * **Breaking API CHANGE**: The ``options`` attribute of UDM objects is now a dictionary. It mirrors the UDM REST APIs ``options`` attribute value. Before it was a list, which did not allow to disable default options (Bug #50974).

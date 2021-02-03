@@ -147,8 +147,8 @@ def _test_a_server_configuration(server: UDMServer) -> UDMServer:
     return server
 
 
-@pytest.fixture(scope="session")  # noqa: C901
-def test_server_configuration(load_test_server_yaml) -> UDMServer:  # pragma: no cover
+@pytest.fixture(scope="session")
+def test_server_configuration(load_test_server_yaml) -> UDMServer:  # noqa: C901 # pragma: no cover
     """
     Get data of server used to run tests.
 
