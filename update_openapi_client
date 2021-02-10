@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -8,12 +8,13 @@ library.
 
 import asyncio
 import functools
+import hashlib
 import inspect
 import os
 import subprocess  # nosec
 import sys
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import click
 import docker
@@ -29,8 +30,9 @@ if not inspect.isfunction(pip_main):
     pip_main = pip_main.main
 
 
-DOCKER_IMAGE = "openapitools/openapi-generator-cli:latest-release"
-JAR_URL = "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.3/openapi-generator-cli-4.2.3.jar"
+DOCKER_IMAGE = "openapitools/openapi-generator-cli:v5.0.0"
+JAR_URL = "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/5.0.0/openapi-generator-cli-5.0.0.jar"
+JAR_SHA1_URL = f"{JAR_URL}.sha1"
 TARGET_PYTHON_PACKAGE_NAME = "openapi_client_udm"
 TARGET_SCHEMA_FILENAME = "udm_openapi.json"
 OPENAPI_GENERATE_COMMAND_COMMON = (
@@ -70,12 +72,12 @@ def coro(f):
         return wrapper
 
 
-def print_error_and_exit(msg, exit_code=1):
+def print_error_and_exit(msg: str, exit_code: int = 1) -> None:
     click.secho(msg, fg="red")
     sys.exit(exit_code)
 
 
-def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
+def run_openapi_generator_docker_container(target_dir: str, quiet: bool, keep_image: bool) -> None:
     docker_client = docker.from_env()
     try:
         version = docker_client.version()
@@ -113,23 +115,55 @@ def run_openapi_generator_docker_container(target_dir, quiet, keep_image):
         docker_client.images.remove(DOCKER_IMAGE)
 
 
-def download_jar(target_path: Path):
-    click.echo("Downloading OpenAPI generator JAR (~19 MiB)...")
+def download_file(url: str, path: Path) -> None:
     try:
-        with requests.get(JAR_URL, stream=True) as resp, target_path.open("wb") as fp:
+        with requests.get(url, stream=True) as resp, path.open("wb") as fp:
             if resp.status_code != 200:
-                print_error_and_exit(
-                    f"Error downloading OpenAPI generator JAR from {JAR_URL!r}: [{resp.status_code}] {resp.reason}"
-                )
+                print_error_and_exit(f"Error downloading {url!r}: [{resp.status_code}] {resp.reason}")
             for chunk in resp.iter_content(chunk_size=8192):
                 if chunk:
                     fp.write(chunk)
-            click.echo(f"Downloaded {fp.tell() / 1024:.1f} KiB.")
-    except requests.ConnectionError as exc:
+            f_size = fp.tell()
+    except requests.RequestException as exc:
         print_error_and_exit(str(exc))
 
+    if f_size > 10240:
+        f_size_s = f"{f_size / 1024:.1f} KiB"
+    else:
+        f_size_s = f"{f_size} bytes"
+    click.echo(f"Downloaded {url.rsplit('/', 1)[-1]}: {f_size_s}.")
 
-def run_openapi_generator_local_java(target_dir: str, quiet: bool, jar_path: Path = None):
+
+def verify_checksum(path: Path, sha1_expected: str) -> None:
+    sha1_found = hashlib.sha1()  # nosec
+    with path.open("rb") as fp:
+        while True:
+            data = fp.read(65536)  # 64 kb chunks
+            if not data:
+                break
+            sha1_found.update(data)
+    if sha1_found.hexdigest() == sha1_expected:
+        click.echo(f"SHA1 checksum of {path.name!r} OK.")
+    else:
+        print_error_and_exit(
+            f"SHA1 checksum of {path.name!r} did not match.\n"
+            f"Expected: {sha1_expected}\n"
+            f"Found: {sha1_found.hexdigest()}"
+        )
+
+
+def download_jar(target_path: Path) -> None:
+    click.echo("Downloading OpenAPI generator JAR (~25 MiB)...")
+    with NamedTemporaryFile() as sha1_file:
+        for url, path in ((JAR_URL, target_path), (JAR_SHA1_URL, Path(sha1_file.name))):
+            download_file(url, path)
+        click.echo("Checking SHA1 sum of JAR file...")
+        sha1_file.seek(0)
+        sha1_expected = sha1_file.read().decode("ascii")
+    verify_checksum(target_path, sha1_expected)
+
+
+def run_openapi_generator_local_java(target_dir: str, quiet: bool, jar_path: Path = None) -> None:
     if not jar_path:
         jar_path = Path(target_dir, "openapi-generator.jar")
         download_jar(jar_path)
@@ -229,7 +263,7 @@ async def update_openapi_client(
     system: bool,
     username: str,
     password: str,
-):
+) -> None:
     if not host:
         print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
     if jar and generator != "java":

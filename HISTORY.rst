@@ -2,6 +2,12 @@
 History
 =======
 
+1.0.1 (2021-02-10)
+------------------
+
+* The script to create/update the OpenAPI client ``update_openapi_client`` has been updated to use the OpenAPI Generator version ``5.0.0``.
+* The ``update_openapi_client`` script now verifies the checksum of the downloaded JAR file.
+
 1.0.0 (2021-02-03)
 ------------------
 
