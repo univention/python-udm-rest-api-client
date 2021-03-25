@@ -2,6 +2,11 @@
 History
 =======
 
+1.0.2 (2021-03-25)
+------------------
+
+* Fix not sending policy modifications to server.
+
 1.0.1 (2021-02-10)
 ------------------
 

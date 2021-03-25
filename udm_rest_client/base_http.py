@@ -637,6 +637,7 @@ class UdmObject(BaseObject):
                     (new_k, set(new_v)) for new_k, new_v in old_policies.items()
                 ):
                     continue
+                diff_dict[k] = v
             elif k == "position" and v:
                 diff_dict[k] = v  # always set position
             else:
