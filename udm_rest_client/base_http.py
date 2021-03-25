@@ -615,8 +615,15 @@ class UdmObject(BaseObject):
             elif k == "props":
                 for prop, value in v.items():
                     if isinstance(value, list):
-                        new_value = set(value)
-                        old_value = set(old_obj["properties"].get(prop, []))
+                        # convert to tuple to avoid TypeError: unhashable type 'dict'
+                        new_value = {
+                            tuple(sorted(_val.items())) if isinstance(_val, dict) else _val
+                            for _val in value
+                        }
+                        old_value = {
+                            tuple(sorted(_old_val.items())) if isinstance(_old_val, dict) else _old_val
+                            for _old_val in old_obj["properties"].get(prop, [])
+                        }
                     else:
                         new_value = value
                         old_value = old_obj["properties"].get(prop)

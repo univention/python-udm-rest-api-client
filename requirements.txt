@@ -1,5 +1,5 @@
 aiohttp==3.7.4
 async-property==0.2.1
 click==7.1.2
-docker==4.4.1
+docker==4.4.4
 requests==2.25.1
