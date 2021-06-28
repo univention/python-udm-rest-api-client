@@ -19,6 +19,10 @@ if ! [ -e /var/cache/univention-system-setup/profile ] && [ -e /var/cache/univen
 fi
 /usr/lib/univention-system-setup/scripts/setup-join.sh
 
+echo "Upgrading UCS..."
+univention-upgrade --ignoreterm --ignoressh --noninteractive --updateto=4.4-99 --disable-app-updates
+univention-app info
+
 echo "Installing UDM REST API..."
 univention-install -y univention-directory-manager-rest
 
@@ -28,7 +32,7 @@ if [ "$(</root/install_ucsschool)" = "1" ]; then
     univention-app install --noninteractive --username Administrator --pwdfile /tmp/univention --skip-checks=must_have_valid_license ucsschool
 
     echo "Configuring UCS@school for singleserver setup..."
-    curl -o /root/schoolinstaller.py https://raw.githubusercontent.com/univention/univention-corporate-server/4.4-4/test/utils/schoolinstaller.py
+    curl -o /root/schoolinstaller.py https://raw.githubusercontent.com/univention/univention-corporate-server/4.4-8/test/utils/schoolinstaller.py
     chmod +x /root/schoolinstaller.py
     /root/schoolinstaller.py -u Administrator -p univention -S -o DEMOSCHOOL2
 

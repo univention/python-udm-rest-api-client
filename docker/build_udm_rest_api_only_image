@@ -9,6 +9,14 @@ else
   export UCS_REPOS="stable"
 fi
 
+if [ "$1" = "--ucsschool" ] || [ "$2" = "--ucsschool" ]; then
+  export UCSSCHOOL=1
+  echo "Building with UCS@school app installed."
+else
+  export UCSSCHOOL=0
+  echo "Building without UCS@school app."
+fi
+
 . ./common.sh
 
 if ! docker images "${DOCKER_REGISTRY}/${UDM_ONLY_PARENT_DOCKER_IMG}:${UCS_REPOS}-${UCS_VERSION}" | grep -E -q -v '^REPOSITORY'; then

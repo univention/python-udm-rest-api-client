@@ -35,7 +35,7 @@ GET_OPENAPI_SCHEMA = UCS_REPOS="stable"; . docker/common.sh && get_openapi_schem
 OPENAPI_BUILD_DIR  = /tmp/openapilibbuild
 OPENAPI_CLIENT_LIB_NAME = openapi-client-udm
 OPENAPI_CLIENT_LIB_IS_INSTALLED = python3 -m pip show -q openapi-client-udm
-DOCKER_IMG_FROM_REGISTRY = docker-test.software-univention.de/ucs-master-amd64-joined-udm-rest-api-only:stable-latest
+DOCKER_IMG_FROM_REGISTRY = docker.software-univention.de/ucs-master-amd64-joined-udm-rest-api-only:stable-4.4-8
 DOCKER_IMG_FROM_REGISTRY_EXISTS = UCS_REPOS="stable"; . docker/common.sh && docker_img_exists "$(DOCKER_IMG_FROM_REGISTRY)"
 DOCKER_IMG_EXISTS = UCS_REPOS="stable"; . docker/common.sh && docker_img_exists "$(DOCKER_IMG_FROM_REGISTRY)"
 START_DOCKER_CONTAINER = docker run --detach --name "$(TEST_CONTAINER_NAME)" --hostname=master -p 9080:80/tcp -p 9443:443/tcp --tmpfs /run --tmpfs /run/lock "$(DOCKER_IMG_FROM_REGISTRY)"
@@ -217,7 +217,8 @@ start-docker-container: download-docker-container ## start docker container (a j
 	fi; \
 	echo -n "Waiting for UDM REST API"; \
 	while ! ($(GET_OPENAPI_SCHEMA) --connect-timeout 1 >/dev/null); do echo -n "."; sleep 1; done; \
-	echo
+	echo ""; \
+	echo "==> UDM REST API: http://$$UCS_CONTAINER_IP/univention/udm/"
 
 stop-and-remove-docker-container: ## stop and remove docker container (not the image)
 	docker stop --time 0 $(TEST_CONTAINER_NAME) || true

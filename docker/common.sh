@@ -5,8 +5,8 @@ if [ -z "$UCS_REPOS" ]; then
   UCS_REPOS="stable"
 fi
 
-export DOCKER_REGISTRY="docker-test-upload.software-univention.de"
-export UCS_VERSION="4.4-4"
+export DOCKER_REGISTRY="docker-upload.software-univention.de"
+export UCS_VERSION="4.4-8"
 
 
 if [ "$UCSSCHOOL" = 1 ]; then

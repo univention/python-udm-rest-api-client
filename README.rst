@@ -130,7 +130,7 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
 .. _`tox`: http://tox.readthedocs.org/
 .. _`UDM REST API`: https://docs.software-univention.de/developer-reference-4.4.html#udm:rest_api
-.. _`Python UDM API`: https://github.com/univention/univention-corporate-server/blob/4.4-2/management/univention-directory-manager-modules/modules/univention/udm/__init__.py
+.. _`Python UDM API`: https://github.com/univention/univention-corporate-server/blob/4.4-8/management/univention-directory-manager-modules/modules/univention/udm/__init__.py
 .. _`OpenAPI Generator`: https://github.com/OpenAPITools/openapi-generator
 .. _`docs`: https://udm-rest-client.readthedocs.io
 .. _`PyPI`: https://pypi.org/project/udm-rest-client/
