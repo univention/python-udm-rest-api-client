@@ -1,7 +1,7 @@
 attrs==20.3.0
 coverage-conditional-plugin==0.3.1
 factory_boy==3.2.0
-Faker==5.8.0
+Faker==8.8.2
 ldap3==2.9
 pytest==6.2.2
 pytest-asyncio==0.14.0
