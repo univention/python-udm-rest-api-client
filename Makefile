@@ -108,7 +108,7 @@ test: ## run tests with the current Python interpreter
 		echo "Using UCS_HOST, UCS_USERDN and UCS_PASSWORD from env."; \
 		export UCS_HOST UCS_USERDN UCS_PASSWORD; \
 	else \
-		echo "Starting UCS in Docker. Set UCS_HOST and UCS_AUTH to use an existing UCS server."; \
+		echo "Starting UCS in Docker. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to use an existing UCS server."; \
 		make start-docker-container; \
 		export UCS_CONTAINER_IP=`$(CONTAINER_IP_CMD)`; \
 		if [ -z "$$UCS_CONTAINER_IP" ]; then \
@@ -126,7 +126,7 @@ test-all: ## run tests with every supported Python version using tox
 		echo "Using UCS_HOST, UCS_USERDN and UCS_PASSWORD from env."; \
 		export UCS_HOST UCS_USERDN UCS_PASSWORD; \
 	else \
-		echo "Starting UCS in Docker. Set UCS_HOST and UCS_AUTH to use an existing UCS server."; \
+		echo "Starting UCS in Docker. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to use an existing UCS server."; \
 		make start-docker-container; \
 		export UCS_CONTAINER_IP=`$(CONTAINER_IP_CMD)`; \
 		if [ -z "$$UCS_CONTAINER_IP" ]; then \
@@ -146,7 +146,7 @@ test-all: ## run tests with every supported Python version using tox
 		echo "Using UCS_HOST, UCS_USERDN and UCS_PASSWORD from env."; \
 		export UCS_HOST UCS_USERDN UCS_PASSWORD; \
 	else \
-		echo "Starting UCS in Docker. Set UCS_HOST and UCS_AUTH to test using existing UCS."; \
+		echo "Starting UCS in Docker. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to test using existing UCS."; \
 		make start-docker-container; \
 		export UCS_CONTAINER_IP=`$(CONTAINER_IP_CMD)`; \
 	fi; \

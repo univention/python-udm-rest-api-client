@@ -77,8 +77,11 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
             object_type = result["univentionObjectType"].value
             if object_type not in BAD_MODULE_NAMES and "://" not in result.entry_dn:  # Bug #50175
                 all_objs.setdefault(object_type, []).append(result)
-        module_names = all_objs.keys()
-        random.shuffle([str(m) for m in module_names])
+        module_names = [str(m) for m in all_objs.keys()]
+        # ignore for now: Bug 54064 - UDM REST API does not handle nagios/service objects
+        # HTTP 500 - RuntimeError: Object was not opened
+        module_names = [m for m in module_names if m != "nagios/service"]
+        random.shuffle(module_names)
         logger.info("Reading %d objects of different UDM module types...", len(module_names))
         entries = [random.choice(all_objs[module_name]) for module_name in module_names]
         objs = await asyncio.gather(*(load_obj_by_dn(udm, entry) for entry in entries))
@@ -101,4 +104,6 @@ async def test_modules_list(udm_kwargs):
 async def test_unknown_modules(udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         modules_list = await udm.unknown_modules()
+        # work around Bug 54063 - UDM REST API doesn't handle ms/* (MS group policy) objects / modules
+        modules_list = [x for x in modules_list if not x.startswith("ms/")]
         assert modules_list == []

@@ -2,6 +2,12 @@
 History
 =======
 
+1.0.4 (2021-11-15)
+------------------
+
+* Update `aiohttp <https://github.com/aio-libs/aiohttp>`_ to (at least) Version ``3.8.1``, which fixes `aiohttp not honoring "no_proxy" <https://github.com/aio-libs/aiohttp/issues/4431>`_.
+* Update development and testing dependencies.
+
 1.0.3 (2021-03-25)
 ------------------
 
