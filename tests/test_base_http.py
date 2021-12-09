@@ -19,6 +19,7 @@ import pytest
 from ldap3 import NO_ATTRIBUTES
 
 import udm_rest_client.base_http as base_http
+from udm_rest_client.base_http import _ldap_base_cache
 from udm_rest_client.exceptions import (
     APICommunicationError,
     ConfigurationError,
@@ -900,6 +901,7 @@ async def test_session_get_json_no_password_in_log(udm_kwargs):
 
     with patch.object(base_http, "logger", logger):
         async with UDM(**udm_kwargs) as udm:
+            _ldap_base_cache.pop(udm.session.openapi_client_config.host, None)  # clear cache
             await udm.session.base_dn
     handler.flush()
     logger.removeHandler(handler)

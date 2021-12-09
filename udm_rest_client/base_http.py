@@ -95,6 +95,7 @@ METHOD_NAMES = {
 }
 MIN_FOLLOW_REDIRECT_SLEEP_TIME = 1.0
 logger = logging.getLogger(__name__)
+_ldap_base_cache: Dict[str, str] = {}
 
 ApiModule = TypeVar("ApiModule")  # openapi_client_udm.SharesShareApi etc
 ApiModel = TypeVar("ApiModel")  # openapi_client_udm.SharesShare etc
@@ -343,11 +344,13 @@ class Session:
         base_dn = await self.base_dn
         return re.compile(r"^(\w+=.+)+,{}$".format(re.escape(base_dn)))
 
-    @async_cached_property
+    @async_property
     async def base_dn(self) -> str:
-        url = urljoin(self.openapi_client_config.host + "/", "ldap/base/")
-        body = await self.get_json(url)
-        return body["dn"]
+        if self.openapi_client_config.host not in _ldap_base_cache:
+            url = urljoin(self.openapi_client_config.host + "/", "ldap/base/")
+            body = await self.get_json(url)
+            _ldap_base_cache[self.openapi_client_config.host] = body["dn"]
+        return _ldap_base_cache[self.openapi_client_config.host]
 
     def openapi_class(self, udm_module_name: str) -> type:
         camel_case_name = _camel_case_name(udm_module_name)
