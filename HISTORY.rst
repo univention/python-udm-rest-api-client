@@ -2,6 +2,11 @@
 History
 =======
 
+1.0.5 (2021-12-09)
+------------------
+
+* Add process wide cache for the LDAP base of each host.
+
 1.0.4 (2021-11-15)
 ------------------
 
