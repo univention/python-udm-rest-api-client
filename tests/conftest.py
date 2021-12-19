@@ -97,7 +97,8 @@ def load_test_server_yaml():
         :raises: TypeError
         """
         with open(path, "r") as fp:
-            config = ruamel.yaml.load(fp, ruamel.yaml.RoundTripLoader)
+            yaml = ruamel.yaml.YAML(typ="rt", pure=True)
+            config = yaml.load(fp)
         return UDMServer(**config)
 
     return _func
@@ -121,7 +122,9 @@ def save_test_server_yaml():
         :raises: OSError (PermissionError etc)
         """
         with open(path, "w") as fp:
-            ruamel.yaml.dump(
+            yaml = ruamel.yaml.YAML(typ="rt", pure=True)
+            yaml.indent = 4
+            yaml.dump(
                 {
                     "host": host,
                     "username": username,
@@ -129,8 +132,6 @@ def save_test_server_yaml():
                     "password": password,
                 },
                 fp,
-                ruamel.yaml.RoundTripDumper,
-                indent=4,
             )
 
     return _func

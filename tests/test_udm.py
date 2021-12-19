@@ -106,4 +106,5 @@ async def test_unknown_modules(udm_kwargs):
         modules_list = await udm.unknown_modules()
         # work around Bug 54063 - UDM REST API doesn't handle ms/* (MS group policy) objects / modules
         modules_list = [x for x in modules_list if not x.startswith("ms/")]
+        # if this fails, you probably have to rebuild the OpenAPI client lib: ./update_openapi_client ...
         assert modules_list == []
