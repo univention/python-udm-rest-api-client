@@ -1,6 +1,0 @@
-ARG DOCKER_REGISTRY
-ARG UCS_VERSION
-
-FROM ${DOCKER_REGISTRY}/ucs-master-amd64-joined:${UCS_VERSION}-stable
-COPY ucs_join.sh.testing /usr/local/sbin/ucs_join.sh
-RUN chmod -v 755 /usr/local/sbin/ucs_join.sh && systemctl enable ucs_join.service

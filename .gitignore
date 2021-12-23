@@ -103,3 +103,6 @@ ENV/
 
 # IDEs
 .idea/
+
+ucs5*.SHA256
+ucs5*.tar.xz

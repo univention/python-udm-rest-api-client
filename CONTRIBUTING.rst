@@ -78,13 +78,13 @@ Ready to contribute? Here's how to set up *udm_rest_client* for local developmen
     $ pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt
     $ make install
 
-3.1 Install the OpenAPI client library using a UCS in a Docker container::
+3.1 Install the OpenAPI client library using a UCS in a LXD container::
 
     $ make pip-install-openapi-client
 
 3.2 Or install it using your UCS server::
 
-    $ update_openapi_client --generator <docker|java> [--insecure] ucs.master.fqdn.or.ip
+    $ update_openapi_client --generator <docker|java> [--insecure] --username Administrator --password s3cr3t ucs.master.fqdn.or.ip
 
 4. Create a branch for local development::
 

@@ -2,13 +2,33 @@
 
 language: python
 python:
-  - 3.6
-  - 3.7
-  - 3.8
-  - 3.9-dev
+    - "3.6"
+    - "3.7"
+    - "3.8"
+    - "3.9"
+
+os: linux
+dist: focal
+addons:
+    snaps:
+        - lxd
+
+before_install:
+    - sudo timedatectl set-timezone Europe/Berlin
+    - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
+    - sudo add-apt-repository --yes ppa:rmescandon/yq
+    - sudo apt update
+    - sudo apt install --yes yq
+    - sudo lxd init --auto --storage-backend dir
+    - make download-lxc-container
+    - sudo make create-lxd-test-server-config
 
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -U tox-travis
+install:
+    - python3 -m pip install -U pip wheel
+    - python3 -m pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt
+    - UCS_HOST=$(sudo sh -c ". $PWD/lxd.sh; lxd_container_ip") make pip-install-openapi-client
+    - pip install -U tox-travis
 
 # Command to run tests, e.g. python setup.py test
-script: tox
+script: UCS_HOST=$(sudo sh -c ". $PWD/lxd.sh; lxd_container_ip") tox

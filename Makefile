@@ -28,17 +28,27 @@ endef
 export PRINT_HELP_PYSCRIPT
 
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
-TEST_CONTAINER_NAME = udm_rest_only
-CONTAINER_IS_RUNNING = UCS_REPOS="stable"; . docker/common.sh && docker_container_running "$(TEST_CONTAINER_NAME)"
-CONTAINER_IP_CMD = UCS_REPOS="stable"; . docker/common.sh && docker_container_ip $(TEST_CONTAINER_NAME)
-GET_OPENAPI_SCHEMA = UCS_REPOS="stable"; . docker/common.sh && get_openapi_schema "$(TEST_CONTAINER_NAME)"
-OPENAPI_BUILD_DIR  = /tmp/openapilibbuild
+
+TEST_CONTAINER_NAME = ucs5
+LXD_IMAGE_FILES_EXIST = . ./lxd.sh && lxd_image_files_exists
+DOWNLOAD_LXD_IMAGE_FILES = . ./lxd.sh && download_lxd_image_files && verify_lxd_image_files
+IMPORT_LXD_IMAGE = . ./lxd.sh && lxd_create_image_from_files
+LXD_IS_INITIALIZED = . ./lxd.sh && lxd_is_initialized
+LXD_IMAGE_EXISTS = . ./lxd.sh && lxd_image_exists
+CONTAINER_IS_RUNNING = . ./lxd.sh && lxd_container_running
+CONTAINER_IS_RUNNING_WITH_IP = . ./lxd.sh && lxd_container_running_with_ip
+CONTAINER_IS_STOPPED = . ./lxd.sh && lxd_container_stopped
+CREATE_LXD_CONTAINER = . ./lxd.sh && lxd_create_container
+START_LXD_CONTAINER = . ./lxd.sh && lxd_start_container
+CONTAINER_IP_CMD = . ./lxd.sh && lxd_container_ip
+GET_OPENAPI_SCHEMA = . ./lxd.sh && get_openapi_schema
+STOP_LXD_CONTAINER = . ./lxd.sh && lxd_stop_container
+REMOVE_LXD_CONTAINER = . ./lxd.sh && lxd_remove_container
+REMOVE_LXD_IMAGE = . ./lxd.sh && lxd_remove_image
+YQ_IS_INSTALLED = . ./lxd.sh && yq_is_installed
+
 OPENAPI_CLIENT_LIB_NAME = openapi-client-udm
 OPENAPI_CLIENT_LIB_IS_INSTALLED = python3 -m pip show -q openapi-client-udm
-DOCKER_IMG_FROM_REGISTRY = docker.software-univention.de/ucs-master-amd64-joined-udm-rest-api-only:stable-4.4-8
-DOCKER_IMG_FROM_REGISTRY_EXISTS = UCS_REPOS="stable"; . docker/common.sh && docker_img_exists "$(DOCKER_IMG_FROM_REGISTRY)"
-DOCKER_IMG_EXISTS = UCS_REPOS="stable"; . docker/common.sh && docker_img_exists "$(DOCKER_IMG_FROM_REGISTRY)"
-START_DOCKER_CONTAINER = docker run --detach --name "$(TEST_CONTAINER_NAME)" --hostname=master -p 9080:80/tcp -p 9443:443/tcp --tmpfs /run --tmpfs /run/lock "$(DOCKER_IMG_FROM_REGISTRY)"
 
 
 help:
@@ -108,17 +118,12 @@ test: ## run tests with the current Python interpreter
 		echo "Using UCS_HOST, UCS_USERDN and UCS_PASSWORD from env."; \
 		export UCS_HOST UCS_USERDN UCS_PASSWORD; \
 	else \
-		echo "Starting UCS in Docker. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to use an existing UCS server."; \
-		make start-docker-container; \
-		export UCS_CONTAINER_IP=`$(CONTAINER_IP_CMD)`; \
-		if [ -z "$$UCS_CONTAINER_IP" ]; then \
-			echo "Cannot get IP of container. Is it running?"; \
-			exit 1; \
-		fi; \
+		echo "Starting UCS using LXD. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to use an existing UCS server."; \
+		make create-lxd-test-server-config; \
 	fi; \
 	python -m pytest -l -v && rv=0 || rv=1; \
-	echo "Stopping and removing the docker container..."; \
-	make stop-and-remove-docker-container; \
+	echo "Stopping and removing the LXD container..."; \
+	make stop-and-remove-lxd-container; \
 	return $$rv
 
 test-all: ## run tests with every supported Python version using tox
@@ -126,17 +131,12 @@ test-all: ## run tests with every supported Python version using tox
 		echo "Using UCS_HOST, UCS_USERDN and UCS_PASSWORD from env."; \
 		export UCS_HOST UCS_USERDN UCS_PASSWORD; \
 	else \
-		echo "Starting UCS in Docker. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to use an existing UCS server."; \
-		make start-docker-container; \
-		export UCS_CONTAINER_IP=`$(CONTAINER_IP_CMD)`; \
-		if [ -z "$$UCS_CONTAINER_IP" ]; then \
-			echo "Cannot get IP of container. Is it running?"; \
-			exit 1; \
-		fi; \
+		echo "Starting UCS using LXD. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to use an existing UCS server."; \
+		make create-lxd-test-server-config || exit 1; \
 	fi; \
 	tox && rv=0 || rv=1; \
-	echo "Stopping and removing the docker container..."; \
-	make stop-and-remove-docker-container; \
+	echo "Stopping and removing the LXD container..."; \
+	make stop-and-remove-lxd-container; \
 	return $$rv
 
 .coverage: *.py docs/*.py udm_rest_client/*.py tests/*.py
@@ -146,8 +146,8 @@ test-all: ## run tests with every supported Python version using tox
 		echo "Using UCS_HOST, UCS_USERDN and UCS_PASSWORD from env."; \
 		export UCS_HOST UCS_USERDN UCS_PASSWORD; \
 	else \
-		echo "Starting UCS in Docker. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to test using existing UCS."; \
-		make start-docker-container; \
+		echo "Starting UCS in LXD. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to test using existing UCS."; \
+		make start-lxd-container; \
 		export UCS_CONTAINER_IP=`$(CONTAINER_IP_CMD)`; \
 	fi; \
 	coverage run --source tests,udm_rest_client -m pytest
@@ -186,43 +186,71 @@ dist: clean ## builds source and wheel package
 install: clean ## install the package to the active Python's site-packages
 	python setup.py develop
 
-build-docker-image: ## build docker image (a joined UCS system with a running UDM REST API)
-	@if $(DOCKER_IMG_EXISTS); then \
-		echo "Docker image '$(DOCKER_IMG_FROM_REGISTRY)' exists."; \
+lxd-is-initialized:
+	@if $(LXD_IS_INITIALIZED); then\
+		echo "LXD is initialized."; \
 	else \
-		(cd docker && ./build_ucs_join_image && ./build_udm_rest_api_only_image); \
+		echo "LXD has not been initialized. Read the documentation for 'lxd init'."; \
 	fi
 
-download-docker-container: ## download docker container from Univention Docker registry (1 GB)
-	@if $(DOCKER_IMG_FROM_REGISTRY_EXISTS); then \
-		echo "Docker image '$(DOCKER_IMG_FROM_REGISTRY)' exists."; \
+download-lxc-container: ## download LXD container from Univention server (1 GB)
+	@if $(LXD_IMAGE_FILES_EXIST); then \
+		echo "LXD image files exist."; \
 	else \
-		docker pull $(DOCKER_IMG_FROM_REGISTRY); \
+		echo "Downloading image files..."; \
+		$(DOWNLOAD_LXD_IMAGE_FILES); \
 	fi
 
-start-docker-container: download-docker-container ## start docker container (a joined UCS system with a running UDM REST API)
+import-lxd-image: lxd-is-initialized download-lxc-container
+	@if $(LXD_IMAGE_EXISTS); then \
+  		echo "LXD image exist."; \
+	else \
+		echo "Importing image into LXD..."; \
+		$(IMPORT_LXD_IMAGE); \
+	fi
+
+yq-is-installed:
+	@if ! $(YQ_IS_INSTALLED); then \
+  		echo "'yq' is required. Please install it: https://github.com/mikefarah/yq"; \
+  	fi
+
+start-lxd-container: import-lxd-image yq-is-installed ## start LXD container (a joined UCS system with a running UDM REST API)
 	@if $(CONTAINER_IS_RUNNING); then \
-		echo "Docker container '$(TEST_CONTAINER_NAME)' is running."; \
+		echo "LXD container '$(TEST_CONTAINER_NAME)' is running at '`$(CONTAINER_IP_CMD)`'."; \
+	elif $(CONTAINER_IS_STOPPED); then \
+		echo "LXD container '$(TEST_CONTAINER_NAME)' is stopped, starting it..."; \
+		$(START_LXD_CONTAINER); \
 	else \
-		echo "Starting docker container..."; \
-		$(START_DOCKER_CONTAINER); \
+		echo "Creating and starting LXD container..."; \
+		$(CREATE_LXD_CONTAINER); \
 	fi
-	@echo "Waiting for docker container to start..."
+	@echo -n "Waiting for container to start..."
 	@while ! ($(CONTAINER_IS_RUNNING)); do echo -n "."; sleep 1; done
-	@echo "Waiting for IP address of container..."
+	@echo -n "Waiting for IP address of container..."
+	@while ! ($(CONTAINER_IS_RUNNING_WITH_IP)); do echo -n "."; sleep 1; done
 	@while true; do export UCS_CONTAINER_IP=`$(CONTAINER_IP_CMD)`; [ -n "$$UCS_CONTAINER_IP" ] && break || (echo "."; sleep 1); done; \
 	if [ -z "$$UCS_CONTAINER_IP" ]; then \
 		echo "Cannot get IP of container."; \
 		exit 1; \
 	fi; \
-	echo -n "Waiting for UDM REST API"; \
+	echo -n "Waiting for UDM REST API..."; \
 	while ! ($(GET_OPENAPI_SCHEMA) --connect-timeout 1 >/dev/null); do echo -n "."; sleep 1; done; \
 	echo ""; \
 	echo "==> UDM REST API: http://$$UCS_CONTAINER_IP/univention/udm/"
 
-stop-and-remove-docker-container: ## stop and remove docker container (not the image)
-	docker stop --time 0 $(TEST_CONTAINER_NAME) || true
-	docker rm $(TEST_CONTAINER_NAME) || true
+stop-lxd-container: ## stop LXD container (not the image)
+	@$(STOP_LXD_CONTAINER) && echo "Stopped container." || "Container not running."; true
+
+stop-and-remove-lxd-container: ## stop and remove LXD container (not the image)
+	@$(STOP_LXD_CONTAINER) && echo "Stopped container." || "Container not running."; true
+	@$(REMOVE_LXD_CONTAINER) && echo "Removed container." || "Container does not exist."; true
+
+remove-lxd-image: stop-and-remove-lxd-container ## stop and remove LXD container AND image
+	$(REMOVE_LXD_IMAGE) && echo "Removed image." || "Image does not exist."
+
+create-lxd-test-server-config: start-lxd-container ## start LXD container and create suitable tests/test_server.yaml
+	@echo "Creating tests/test_server.yaml..."
+	@sed -e "s/10.20.30.40/`$(CONTAINER_IP_CMD)`/g" -e "s/dc=example,dc=com/dc=uni,dc=dtr/g" -e "s/s3cr3t/univention/g" tests/test_server_example.yaml > tests/test_server.yaml
 
 install-openapi-client:  ## build and install the OpenAPI client library into 'venv'
 	@. venv/bin/activate; make pip-install-openapi-client
@@ -231,17 +259,21 @@ pip-install-openapi-client:  ## build and install the OpenAPI client library int
 	@if $(OPENAPI_CLIENT_LIB_IS_INSTALLED); then \
 		echo "OpenAPI client lib ('$(OPENAPI_CLIENT_LIB_NAME)') is installed (see 'pip list')."; \
 	else \
-		make start-docker-container; \
-		./update_openapi_client --insecure `$(CONTAINER_IP_CMD)` --generator docker --username Administrator --password univention; \
+		if [ -z "$$UCS_HOST" ]; then \
+			echo "Env 'UCS_HOST' not set, starting LXD container..."; \
+			make start-lxd-container; \
+			UCS_HOST=`$(CONTAINER_IP_CMD)`; \
+		fi; \
+		./update_openapi_client --insecure --generator docker --username Administrator --password univention $$UCS_HOST; \
 	fi
 
 pip-install-openapi-client-from-test-pypi:  ## install pre-built OpenAPI client library into currently active env
 	@if $(OPENAPI_CLIENT_LIB_IS_INSTALLED); then \
 		echo "OpenAPI client lib ('$(OPENAPI_CLIENT_LIB_NAME)') is installed (see 'pip list')."; \
 	else \
-		make start-docker-container; \
+		make start-lxd-container; \
 		python3 -m pip install --compile --upgrade --index-url https://test.pypi.org/simple/ openapi-client-udm; \
 	fi
 
-print-ucs-docker-ip: start-docker-container ## print IP address of UCS docker container (start if not running)
+print-ucs-lxd-ip: start-lxd-container ## print IP address of UCS LXD container (start if not running)
 	@echo `$(CONTAINER_IP_CMD)`

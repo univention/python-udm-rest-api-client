@@ -11,13 +11,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from urllib.parse import unquote
 
 import attr
-import docker
 import factory
 import faker
 import pytest
 import requests
 import ruamel.yaml
-from docker.errors import NotFound as ContainerNotFound
 from ldap3 import AUTO_BIND_TLS_BEFORE_BIND, SIMPLE, Connection, Server
 from ldap3.core.exceptions import LDAPInvalidDnError
 from ldap3.utils.dn import parse_dn
@@ -34,7 +32,6 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 
-TEST_DOCKER_CONTAINER_NAME = "udm_rest_only"
 TEST_SERVER_YAML_FILENAME = Path(__file__).parent / "test_server.yaml"
 UDMServer = namedtuple("UDMServer", ["host", "username", "user_dn", "password"])
 fake = faker.Faker()
@@ -57,36 +54,6 @@ class BadTestServerConfig(Exception):
 
 class NoTestServerConfig(Exception):
     ...
-
-
-def running_test_container() -> UDMServer:  # pragma: no cover
-    """
-    :raises: ContainerIpUnknown
-    :raises: ContainerNotFound
-    """
-    docker_client = docker.from_env()
-    container = docker_client.containers.get(TEST_DOCKER_CONTAINER_NAME)
-    if container.status != "running":  # pragma: no cover
-        print(
-            f"Found stopped Docker container {TEST_DOCKER_CONTAINER_NAME!r}. Trying to start and continue."
-        )  # pragma: no cover
-        container.start()
-    for k, v in container.attrs["NetworkSettings"]["Networks"].items():
-        try:
-            server = UDMServer(
-                host=v["IPAddress"],
-                username="Administrator",
-                user_dn="uid=Administrator,cn=users,dc=ucs-test,dc=intranet",
-                password="univention",
-            )
-            print(f"Using Docker container '{TEST_DOCKER_CONTAINER_NAME!r}'.")
-            return server
-        except KeyError:  # pragma: no cover
-            pass
-    else:  # pragma: no cover
-        raise ContainerIpUnknown(
-            f"Could not get IP address from container {TEST_DOCKER_CONTAINER_NAME!r}."
-        )
 
 
 @pytest.fixture(scope="session")
@@ -174,23 +141,7 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # noqa: C901
         print("OK: Using configuration in YAML file.")
         return res
 
-    print(f"Trying to use running Docker container {TEST_DOCKER_CONTAINER_NAME!r}...")
-    try:
-        res = running_test_container()
-        _test_a_server_configuration(res)
-    except ContainerNotFound:
-        print(f"Container not found: {TEST_DOCKER_CONTAINER_NAME}.")
-    except ContainerIpUnknown as exc:
-        raise BadTestServerConfig(str(exc)) from exc
-    except udm_rest_client.exceptions.APICommunicationError as exc:
-        raise BadTestServerConfig(
-            "Error connecting to test server using credentials for Docker "
-            "Docker container {TEST_DOCKER_CONTAINER_NAME!r}: [{exc.status}] {exc!s}"
-        ) from exc
-    else:
-        return res
-
-    print("Trying to use load test server config from environment...")
+    print("Trying to use test server config from environment...")
     try:
         res = UDMServer(
             host=os.environ["UCS_HOST"],

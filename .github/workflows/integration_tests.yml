@@ -3,34 +3,48 @@
 
 name: Integration tests
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 jobs:
-  build:
+    build:
 
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                python-version: [ "3.6", "3.7", "3.8", "3.9", "3.10" ]
 
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip wheel
-        python -m pip install pytest-cov
-        python -m pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt
-        python -m pip list
-    - name: Install Python package
-      run: python -m pip install -e .
-    - name: start docker container
-      run: make start-docker-container
-    - name: install OpenAPI client
-      run: make pip-install-openapi-client-from-test-pypi
-    - name: Test with pytest
-      run: pytest -l -v --cov=tests --cov=udm_rest_client --cov-fail-under=100 --cov-report=term-missing
+        steps:
+            -   uses: actions/checkout@v2
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v2
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Install dependencies
+                run: |
+                    python -m pip install --upgrade pip wheel
+                    python -m pip install pytest-cov
+                    python -m pip install -r requirements.txt -r requirements_dev.txt -r requirements_test.txt
+                    python -m pip list
+            -   name: Install Python package
+                run: python -m pip install -e .
+            -   name: Install yq
+                run: |
+                    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
+                    sudo add-apt-repository --yes ppa:rmescandon/yq
+                    sudo apt update
+                    sudo apt install --yes yq
+            -   name: Update LXD
+                run: |
+                    sudo snap list
+                    sudo snap refresh
+                    sudo snap refresh --channel=latest lxd
+                    sudo snap list
+            -   name: Start LXD container
+                run: |
+                    sudo lxd init --auto --storage-backend dir
+                    make download-lxc-container
+                    sudo make create-lxd-test-server-config
+            -   name: Install OpenAPI client
+                run: UCS_HOST=$(sudo sh -c ". $PWD/lxd.sh; lxd_container_ip") make pip-install-openapi-client
+            -   name: Test with pytest
+                run: pytest -l -v --cov=tests --cov=udm_rest_client --cov-fail-under=100 --cov-report=term-missing

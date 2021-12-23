@@ -17,7 +17,7 @@ Features
 * Automatic handling of HTTP(S) sessions
 * Type annotations
 * 100% test coverage (unittests + integration tests)
-* Python 3.6, 3.7, 3.8, 3.9
+* Python 3.6, 3.7, 3.8, 3.9, 3.10
 
 
 Usage
@@ -81,9 +81,9 @@ New extended attributes do *not* require to rebuild the OpenAPI client library.
 Tests
 -----
 
-There are some isolated unittests, but most tests run against a real UDM REST API. A UCS Docker container is used for this. The ``Makefile`` automates downloading and starting the Docker container (1 GB) and running the tests.
+There are some isolated unittests, but most tests run against a real UDM REST API. Either an existing UCS installation can be used, or a LXD container started.
 
-Run tests with current Python interpreter::
+Run tests with the current Python interpreter::
 
     $ make test
 
@@ -91,20 +91,36 @@ Using `tox`_ the tests can be executed with all supported Python versions::
 
     $ make test-all
 
-It is also possible to use an existing UCS server for the tests. Export ``UCS_HOST`` (the servers IP/FQDN), ``UCS_USERDN`` (the DN of an administrator account, usually ``uid=Administrator``) and ``UCS_PASSWORD`` (the accounts password), before starting the tests::
+Using the UCS LXD container is automated in the ``Makefile``. It has commands to download and start the LXD image (1 GB) and running the tests::
+
+    $ make create-lxd-test-server-config
+    $ make test
+
+Initializing LXD is however left up to the developer (see https://linuxcontainers.org/lxd/). Using storage backend ``lvm``, ``btrfs`` or ``zfs`` is recommended for repeated use. To run the tests only once, the storage backend ``dir`` is the easiest to use. It is very slow though, as it requires unpacking the image every time the container is started.
+
+The ``Makefile`` also needs ``yq`` to be installed: https://github.com/mikefarah/yq
+
+It is also possible to use an existing UCS server for the tests. Export ``UCS_HOST`` (the servers IP/FQDN), ``UCS_USERDN`` (the DN of an administrator account, usually ``uid=Administrator,cn=users,dc=...``) and ``UCS_PASSWORD`` (the accounts password), before starting the tests::
 
     $ export UCS_HOST="my.server.local"
     $ export UCS_USERDN="uid=Administrator,cn=users,dc=domain,dc=local"
     $ export UCS_PASSWORD="s3cr3t"
     $ make test
 
+Much more comfortable (especially for repeated use) is creating a file ``test_server.yaml`` in the ``tests`` directory, which will automatically be used by the tests::
+
+    $ cp tests/test_server_example.yaml test_server.yaml
+    $ $EDITOR test_server.yaml
+
 Don't forget to update the OpenAPI client library before running the test against a new server::
 
-    $ update_openapi_client --generator <docker|java> $UCS_HOST
+    $ update_openapi_client --generator <docker|java> --username Administrator --password s3cr3t $UCS_HOST
 
-To get the IP address of the UCS Docker container run::
+Run ``update_openapi_client --help`` to see further options.
 
-    $ docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' udm_rest_only
+To get the IP address of the running UCS LXD container execute::
+
+    $ . lxd.sh ; lxd_container_ip
 
 Logging
 -------
@@ -116,8 +132,8 @@ The *UDM REST API* on the UCS server logs into the file ``/var/log/univention/di
 
 Repo permissions
 ----------------
-* Github: @dansan and @JuergenBS
-* Gitlab: @JuergenBS
+* GitHub: @dansan and @JuergenBS
+* GitLab: @JuergenBS
 * PyPI: @dansan and @SamuelYaron
 * RTD: @dansan and @SamuelYaron
 

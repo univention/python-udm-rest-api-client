@@ -2,6 +2,11 @@
 History
 =======
 
+>1.0.5 ()
+------------------
+
+* UCS 5.0 container for testing is now run using LXD.
+
 1.0.5 (2021-12-09)
 ------------------
 
