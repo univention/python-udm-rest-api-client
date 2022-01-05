@@ -2,10 +2,11 @@
 History
 =======
 
->1.0.5 ()
+1.0.6 (2022-01-05)
 ------------------
 
 * UCS 5.0 container for testing is now run using LXD.
+* Fix deprecated use of ``ruamel.yaml`` in tests.
 
 1.0.5 (2021-12-09)
 ------------------
