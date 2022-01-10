@@ -32,7 +32,7 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 
-TEST_SERVER_YAML_FILENAME = Path(__file__).parent / "test_server.yaml"
+TEST_SERVER_YAML_FILENAME = Path(__file__).parent / "test_server_example.yaml"
 UDMServer = namedtuple("UDMServer", ["host", "username", "user_dn", "password"])
 fake = faker.Faker()
 logger = logging.getLogger(__name__)
