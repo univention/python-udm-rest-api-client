@@ -2,6 +2,11 @@
 History
 =======
 
+1.0.7 (2022-01-18)
+------------------
+
+* Lower required version of ``click`` library, for compatibility with ``typer<0.4.0``.
+
 1.0.6 (2022-01-05)
 ------------------
 
