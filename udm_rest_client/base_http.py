@@ -831,13 +831,16 @@ class UdmObject(BaseObject):
             )
         except APICommunicationError as exc:
             raise MoveError(f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}")
-        if status != 201:  # pragma: no cover
+        if status not in (200, 201, 202):  # pragma: no cover
             raise MoveError(
                 f"Error moving {self} to {position!r}:\nHTTP [{status}]\n"
                 f"response: {new_api_obj!r}\nheader: {header!r}'",
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )
+
+        if status == 200:  # pragma: no cover
+            return new_api_obj
 
         udm_api_response = await self._follow_move_redirects(header["Location"], position)
 

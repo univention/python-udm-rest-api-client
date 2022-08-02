@@ -2,6 +2,11 @@
 History
 =======
 
+1.0.11 (2022-10-19)
+------------------
+
+* Handle UDM REST API doing immediate moves (without redirects) for objects without subordinates.
+
 1.0.10 (2022-10-13)
 -------------------
 
