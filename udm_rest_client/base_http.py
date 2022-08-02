@@ -191,7 +191,7 @@ class Session:
         Use the provided data to connect to the UDM REST API. Pass an instance
         of this to the UDM constructor.
 
-        Additional settings for the HTTP client can be passes through `kwargs`:
+        Additional settings for the HTTP client can be passed through `kwargs`:
 
         * debug (bool, False): debug switch
         * verify_ssl (bool, True): enable/disable verifying SSL certificate
@@ -211,10 +211,10 @@ class Session:
 
         :param str username: username to use for UDM REST API connection
         :param str password: password of user for UDM REST API connection
-        :param str url: URL of UDM REST API (e.g. `https://FQ.DN/univention/udm/`)
+        :param str url: URL of UDM REST API (e.g. `https://FQ.HN/univention/udm/`)
         :param int max_client_tasks: max. number of tasks starting parallel
-            connections to open to the UDM REST API; minimum is 4; to few
-            connections will lower performance, to many connections will lead
+            connections to open to the UDM REST API; minimum is 4; too few
+            connections will lower performance, too many connections will lead
             to timeouts
         :param str request_id: correlation ID that is added to every request and
             response. Set this if you want an existing ID to be passed to the UDM
@@ -817,7 +817,7 @@ class UdmObject(BaseObject):
 
     async def _move(self, position: str) -> ApiModel:
         """
-        Change the `position` ob an object.
+        Change the `position` of an object.
 
         :param str position: DN of the objects new position
         :return: the new ApiModel object from the UDM REST API
