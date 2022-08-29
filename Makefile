@@ -47,6 +47,7 @@ REMOVE_LXD_CONTAINER = . ./lxd.sh && lxd_remove_container
 REMOVE_LXD_IMAGE = . ./lxd.sh && lxd_remove_image
 YQ_IS_INSTALLED = . ./lxd.sh && yq_is_installed
 
+OPENAPI_GENERATOR_DOCKER_IMAGE = "openapitools/openapi-generator-cli:v5.0.0"
 OPENAPI_CLIENT_LIB_NAME = openapi-client-udm
 OPENAPI_CLIENT_LIB_IS_INSTALLED = python3 -m pip show -q openapi-client-udm
 
@@ -277,3 +278,19 @@ pip-install-openapi-client-from-test-pypi:  ## install pre-built OpenAPI client 
 
 print-ucs-lxd-ip: start-lxd-container ## print IP address of UCS LXD container (start if not running)
 	@echo `$(CONTAINER_IP_CMD)`
+
+upload_openapi-client-to-test-pypi: clean  ## build and upload "openapi-client-udm" package to test-pypi
+	if [ -z "$$UCS_HOST" ] || [ -z "$$PACKAGE_VERSION" ]; then \
+  		echo "Before running this command:"; \
+  		echo "export UCS_HOST=10.200.x.y; PACKAGE_VERSION=1.0.x"; echo; \
+  		exit 1; \
+	fi
+	mkdir -pv /tmp/build
+	curl -u Administrator:univention http://$$UCS_HOST/univention/udm/openapi.json > /tmp/build/udm_openapi.json
+	docker run -u "`id -u`:`id -g`" -v /tmp/build:/local $(OPENAPI_GENERATOR_DOCKER_IMAGE) generate -g python-legacy --library asyncio --package-name openapi_client_udm "--additional-properties=packageVersion=$$PACKAGE_VERSION" -i /local/udm_openapi.json -o /local/python
+	cd /tmp/build/python; \
+	python setup.py sdist; \
+	python setup.py bdist_wheel; \
+	ls -l dist
+	cd /tmp/build/python; \
+	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
