@@ -56,6 +56,8 @@ Usage::
 [1] https://docs.software-univention.de/developer-reference-4.4.html#udm:rest_api
 """
 
+
+import contextlib
 from typing import Sequence
 from urllib.parse import urljoin
 
@@ -70,10 +72,8 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 # that code doesn't work when something goes wrong:
-try:
+with contextlib.suppress(AttributeError):
     del openapi_client_udm.rest.RESTClientObject.__del__
-except AttributeError:  # pragma: no cover
-    pass
 
 
 class UDM:
@@ -212,7 +212,7 @@ class UDM:
         :return: list of UDM module names
         :rtype: list(str)
         """
-        url = urljoin(self.session.openapi_client_config.host + "/", "navigation/")
+        url = urljoin(f"{self.session.openapi_client_config.host}/", "navigation/")
         body = await self.session.get_json(url)
         return sorted(ot["name"] for ot in body["_links"]["udm:object-types"])
 

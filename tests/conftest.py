@@ -181,7 +181,7 @@ class UserPropertiesFactory(factory.Factory):
         model = UserProperties
 
     username = factory.LazyFunction(
-        lambda: f"{fake.first_name()}.{fake.last_name()}".lower()  # noqa: E501
+        lambda: f"{fake.unique.first_name()}.{fake.unique.last_name()}".lower()  # noqa: E501
     )
     password = factory.Faker(
         "password",
