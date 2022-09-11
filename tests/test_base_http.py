@@ -2,6 +2,8 @@
 
 """Tests for `udm_rest_client.base_http` module."""
 
+
+import contextlib
 import copy
 import datetime
 import inspect
@@ -17,6 +19,7 @@ import attr
 import faker
 import pytest
 from ldap3 import NO_ATTRIBUTES
+from openapi_client_udm import api_client
 
 import udm_rest_client.base_http as base_http
 from udm_rest_client.base_http import _ldap_base_cache
@@ -34,13 +37,16 @@ from udm_rest_client.exceptions import (
 )
 from udm_rest_client.udm import UDM
 
+PY38 = sys.version_info >= (3, 8)
+
+if PY38:
+    from unittest.mock import AsyncMock  # pragma: no-cover-py-lt-38
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s %(levelname)-5s [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
 )
 logger = logging.getLogger(__name__)
-fake = faker.Faker()
-PY38 = sys.version_info >= (3, 8)
 
 
 def test_is_api_model():
@@ -983,3 +989,33 @@ async def test_obj_eq(user_created_via_http, udm_kwargs):
         assert obj != obj2
         setattr(obj, attri, ori_val)
         assert obj == obj2
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not PY38, reason="AsyncMock requires python3.8 or higher.")
+@pytest.mark.parametrize(
+    "cid", [(None, None), (None, "X-Foo"), ("12345", None), ("12345", "X-Foo")], ids=lambda x: repr(x)
+)
+async def test_correlation_id(cid, udm_kwargs):  # pragma: no-cover-py-lt-38
+    correlation_id, correlation_id_header = cid
+    udm_kwargs = udm_kwargs.copy()
+    if correlation_id:
+        udm_kwargs["request_id"] = correlation_id
+    if correlation_id_header:
+        udm_kwargs["request_id_header"] = correlation_id_header
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        response_mock = AsyncMock()
+        response_mock.getheader = lambda x: None
+        request_mock = AsyncMock(return_value=response_mock)
+        with patch.object(api_client.ApiClient, "request", request_mock):
+            with contextlib.suppress(AttributeError):  # in call_openapi() -> api_model_obj.dn
+                await mod.get("foo=bar")
+            headers = request_mock.call_args.kwargs["headers"]
+            assert "Access-Control-Expose-Headers" in headers
+            exp_header = correlation_id_header or "X-Request-ID"
+            assert headers["Access-Control-Expose-Headers"] == exp_header
+            assert exp_header in headers
+            assert headers[exp_header]
+            if correlation_id:
+                assert headers[exp_header] == correlation_id

@@ -109,7 +109,7 @@ It is also possible to use an existing UCS server for the tests. Export ``UCS_HO
 
 Much more comfortable (especially for repeated use) is creating a file ``test_server.yaml`` in the ``tests`` directory, which will automatically be used by the tests::
 
-    $ cp tests/test_server_example.yaml test_server.yaml
+    $ cp test_server_example.yaml test/test_server.yaml
     $ $EDITOR test_server.yaml
 
 Don't forget to update the OpenAPI client library before running the test against a new server::

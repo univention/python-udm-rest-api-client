@@ -98,6 +98,8 @@ class UDM:
         password: str,
         url: str,
         max_client_tasks: int = 10,
+        request_id: str = None,
+        request_id_header: str = "X-Request-ID",
         **kwargs,
     ):
         """
@@ -127,12 +129,25 @@ class UDM:
             connections to open to the UDM REST API; minimum is 4; to few
             connections will lower performance, to many connections will lead
             to timeouts
+        :param str request_id: correlation ID that is added to every request and
+            response. Set this if you want an existing ID to be passed to the UDM
+            REST API. If unset, a new random ID will be generated.
+        :param str request_id_header: HTTP header that should be used to send the
+            `request_id`. If unset, "X-Request-ID" will be used.
         :param kwargs: attributes to set on the HTTP client configuration
             object (:py:class:`openapi_client_udm.configuration.Configuration`)
         :raises univention.udm.exceptions.APICommunicationError: Invalid
             credentials, server down, etc.
         """
-        self.session = Session(username, password, url, max_client_tasks, **kwargs)
+        self.session = Session(
+            username=username,
+            password=password,
+            url=url,
+            max_client_tasks=max_client_tasks,
+            request_id=request_id,
+            request_id_header=request_id_header,
+            **kwargs,
+        )
         self._api_version = 2
 
     async def __aenter__(self):

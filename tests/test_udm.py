@@ -17,7 +17,8 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-5s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
 )
 logger = logging.getLogger(__name__)
-BAD_MODULE_NAMES = ("policies/admin_user", "policies/thinclient", "settings/data")
+# remove 'users/ldap' from list, when Bug #55189 is fixed
+BAD_MODULE_NAMES = ("policies/admin_user", "policies/thinclient", "settings/data", "users/ldap")
 
 
 @pytest.mark.asyncio

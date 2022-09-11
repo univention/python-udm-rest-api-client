@@ -39,6 +39,7 @@ import json
 import logging
 import re
 import time
+import uuid
 import warnings
 from collections.abc import MutableMapping, MutableSequence
 from functools import lru_cache
@@ -194,6 +195,8 @@ class Session:
         password: str,
         url: str,
         max_client_tasks: int = 10,
+        request_id: str = None,
+        request_id_header: str = "X-Request-ID",
         **kwargs,
     ):
         """
@@ -225,6 +228,11 @@ class Session:
             connections to open to the UDM REST API; minimum is 4; to few
             connections will lower performance, to many connections will lead
             to timeouts
+        :param str request_id: correlation ID that is added to every request and
+            response. Set this if you want an existing ID to be passed to the UDM
+            REST API. If unset, a new random ID will be generated.
+        :param str request_id_header: HTTP header that should be used to send the
+            `request_id`. If unset, "X-Request-ID" will be used.
         :param kwargs: attributes to set on the HTTP client configuration
             object (:py:class:`openapi_client_udm.configuration.Configuration`)
         :raises univention.udm.exceptions.APICommunicationError: Invalid
@@ -272,11 +280,15 @@ class Session:
         self._client: openapi_client_udm.ApiClient = None
         self._session: aiohttp.ClientSession = None
         self._client_task_limiter = asyncio.Semaphore(max_client_tasks)
+        self.request_id = request_id or str(int(uuid.uuid4()))
+        self.request_id_header = request_id_header
 
     def open(self) -> None:
         if self._session:
             return
         self._client = openapi_client_udm.ApiClient(self.openapi_client_config)
+        self._client.set_default_header("Access-Control-Expose-Headers", self.request_id_header)
+        self._client.set_default_header(self.request_id_header, self.request_id)
         self._session = self._client.rest_client.pool_manager
 
     async def close(self) -> None:
@@ -294,7 +306,9 @@ class Session:
 
     async def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
         request_kwargs = copy.deepcopy(kwargs)
-        request_kwargs.setdefault("headers", {}).update({"Accept": "application/json"})
+        request_kwargs.setdefault("headers", {}).update(
+            {"Accept": "application/json", self.request_id_header: self.request_id}
+        )
         request_kwargs["auth"] = aiohttp.BasicAuth(
             self.openapi_client_config.username, self.openapi_client_config.password
         )
