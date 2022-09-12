@@ -2,6 +2,12 @@
 History
 =======
 
+1.0.8 (2022-09-11)
+------------------
+
+* Send a correlation ID with each request.
+* Raise version of generated client library ``openapi-client-udm`` to ``1.0.1``.
+
 1.0.7 (2022-01-18)
 ------------------
 

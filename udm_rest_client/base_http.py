@@ -32,6 +32,7 @@ Base classes for (simplified) UDM modules and objects using the UDM REST API
 """
 
 import asyncio
+import contextlib
 import copy
 import datetime
 import inspect
@@ -39,6 +40,7 @@ import json
 import logging
 import re
 import time
+import uuid
 import warnings
 from collections.abc import MutableMapping, MutableSequence
 from functools import lru_cache
@@ -77,11 +79,6 @@ except ImportError as exc:  # pragma: no cover
         "Please run 'update_openapi_client' to install the OpenAPI client "
         "library package 'openapi-client-udm'."
     ) from exc
-
-
-if False:  # pylint: disable=using-constant-test
-    # prevent cyclic import, used only by mypy
-    from .udm import UDM  # pylint: disable=unused-import  # noqa: F401
 
 
 METHOD_NAMES = {
@@ -134,12 +131,7 @@ def _serialize_obj(obj: Any) -> Any:
     if isinstance(obj, UdmObject):
         return obj.uri
     if isinstance(obj, dict):
-        res = {}
-        for k, v in obj.items():
-            if str(k).startswith("_"):
-                continue
-            res[k] = _serialize_obj(v)
-        return res
+        return {k: _serialize_obj(v) for k, v in obj.items() if not str(k).startswith("_")}
     if any(isinstance(obj, x) for x in (list, tuple)):
         return [_serialize_obj(v) for v in obj]
     if _is_api_model(type(obj)):
@@ -177,13 +169,10 @@ def _uri2module_dn(uri: str) -> Tuple[str, str]:
 
 def _camel_case_name(udm_module_name: str) -> str:
     cc_name = "".join(f"{s[0].upper()}{s[1:]}" for s in udm_module_name.strip("/_").split("/"))
+
     while "_" in cc_name:
         index = cc_name.find("_")
-        cc_name = "{}{}{}".format(
-            cc_name[:index],
-            cc_name[index + 1].upper(),
-            cc_name[index + 2 :],  # noqa: E203
-        )
+        cc_name = f"{cc_name[:index]}{cc_name[index + 1].upper()}{cc_name[index + 2:]}"
     return cc_name
 
 
@@ -194,6 +183,8 @@ class Session:
         password: str,
         url: str,
         max_client_tasks: int = 10,
+        request_id: str = None,
+        request_id_header: str = "X-Request-ID",
         **kwargs,
     ):
         """
@@ -225,6 +216,11 @@ class Session:
             connections to open to the UDM REST API; minimum is 4; to few
             connections will lower performance, to many connections will lead
             to timeouts
+        :param str request_id: correlation ID that is added to every request and
+            response. Set this if you want an existing ID to be passed to the UDM
+            REST API. If unset, a new random ID will be generated.
+        :param str request_id_header: HTTP header that should be used to send the
+            `request_id`. If unset, "X-Request-ID" will be used.
         :param kwargs: attributes to set on the HTTP client configuration
             object (:py:class:`openapi_client_udm.configuration.Configuration`)
         :raises univention.udm.exceptions.APICommunicationError: Invalid
@@ -272,11 +268,15 @@ class Session:
         self._client: openapi_client_udm.ApiClient = None
         self._session: aiohttp.ClientSession = None
         self._client_task_limiter = asyncio.Semaphore(max_client_tasks)
+        self.request_id = request_id or str(int(uuid.uuid4()))
+        self.request_id_header = request_id_header
 
     def open(self) -> None:
         if self._session:
             return
         self._client = openapi_client_udm.ApiClient(self.openapi_client_config)
+        self._client.set_default_header("Access-Control-Expose-Headers", self.request_id_header)
+        self._client.set_default_header(self.request_id_header, self.request_id)
         self._session = self._client.rest_client.pool_manager
 
     async def close(self) -> None:
@@ -294,7 +294,9 @@ class Session:
 
     async def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
         request_kwargs = copy.deepcopy(kwargs)
-        request_kwargs.setdefault("headers", {}).update({"Accept": "application/json"})
+        request_kwargs.setdefault("headers", {}).update(
+            {"Accept": "application/json", self.request_id_header: self.request_id}
+        )
         request_kwargs["auth"] = aiohttp.BasicAuth(
             self.openapi_client_config.username, self.openapi_client_config.password
         )
@@ -327,7 +329,7 @@ class Session:
 
     async def get_object_type(self, dn: str) -> str:
         dn = dn.replace("//", ",/=/,")
-        url = urljoin(self.openapi_client_config.host + "/", f"object/{dn}")
+        url = urljoin(f"{self.openapi_client_config.host}/", f"object/{dn}")
         body = await self.get_json(url, allow_redirects=True)
         try:
             return body["objectType"]
@@ -342,12 +344,12 @@ class Session:
     @async_cached_property
     async def dn_regex(self) -> Pattern:
         base_dn = await self.base_dn
-        return re.compile(r"^(\w+=.+)+,{}$".format(re.escape(base_dn)))
+        return re.compile(rf"^(\w+=.+)+,{re.escape(base_dn)}$")
 
     @async_property
     async def base_dn(self) -> str:
         if self.openapi_client_config.host not in _ldap_base_cache:
-            url = urljoin(self.openapi_client_config.host + "/", "ldap/base/")
+            url = urljoin(f"{self.openapi_client_config.host}/", "ldap/base/")
             body = await self.get_json(url)
             _ldap_base_cache[self.openapi_client_config.host] = body["dn"]
         return _ldap_base_cache[self.openapi_client_config.host]
@@ -456,7 +458,7 @@ class Session:
                 if exc.status == 503:  # pragma: no cover
                     if retries > 0:
                         logger.warning(
-                            "UDM REST API returned HTTP 503 (%s), retrying in %d " "seconds.",
+                            "UDM REST API returned HTTP 503 (%s), retrying in %d seconds.",
                             exc.reason,
                             retry_wait,
                         )
@@ -468,11 +470,9 @@ class Session:
                         # fall through
                 reason = exc.reason
                 if exc.body:
-                    try:
+                    with contextlib.suppress(KeyError, ValueError):
                         resp_obj = json.loads(exc.body)
                         reason = f"{reason}: {resp_obj['error']['error']}"
-                    except (KeyError, ValueError):  # pragma: no cover
-                        pass
                 if exc.status == 422 and operation == "create":
                     raise CreateError(reason) from exc
                 if exc.status == 422 and operation == "update":
@@ -489,7 +489,7 @@ class UdmObjectProperties(BaseObjectProperties):
     """Container for UDM properties."""
 
     def _to_dict(self) -> Dict[str, Any]:
-        return dict((k, _serialize_obj(v)) for k, v in self.items())
+        return {k: _serialize_obj(v) for k, v in self.items()}
 
 
 class UdmObject(BaseObject):
@@ -637,15 +637,15 @@ class UdmObject(BaseObject):
             elif k == "policies" and v:
                 if hasattr(self._api_obj.policies, "attribute_map"):
                     attribute_map: Dict[str, str] = self._api_obj.policies.attribute_map
-                    old_policies = dict(
-                        (attribute_map[k], v) for k, v in self._api_obj.policies.to_dict().items()
-                    )
+                    old_policies = {
+                        attribute_map[k]: v for k, v in self._api_obj.policies.to_dict().items()
+                    }
                 else:
                     old_policies = self._api_obj.policies
                 # v is Dict[str, List[str]], compare as Dict[str, Set[str]]
-                if dict((diff_k, set(diff_v)) for diff_k, diff_v in v.items()) == dict(
-                    (new_k, set(new_v)) for new_k, new_v in old_policies.items()
-                ):
+                if {diff_k: set(diff_v) for diff_k, diff_v in v.items()} == {
+                    new_k: set(new_v) for new_k, new_v in old_policies.items()
+                }:
                     continue
                 diff_dict[k] = v
             elif k == "position" and v:
@@ -750,26 +750,23 @@ class UdmObject(BaseObject):
         if hasattr(api_model_obj.options, "attribute_map"):
             #  openapi_client_udm.models.usersuser_options.UsersuserOptions etc
             attribute_map: Dict[str, str] = api_model_obj.options.attribute_map
-            self.options = dict(
-                (attribute_map[k], v) for k, v in api_model_obj.options.to_dict().items()
-            )
+            self.options = {attribute_map[k]: v for k, v in api_model_obj.options.to_dict().items()}
         else:
             # empty dict
             self.options = api_model_obj.options
         if hasattr(api_model_obj.policies, "attribute_map"):
             # openapi_client_udm.models.settingsmswmifilter_policies.SettingsmswmifilterPolicies
             attribute_map: Dict[str, str] = api_model_obj.policies.attribute_map
-            policies = dict((attribute_map[k], v) for k, v in api_model_obj.policies.to_dict().items())
+            policies = {attribute_map[k]: v for k, v in api_model_obj.policies.to_dict().items()}
         else:
             # empty dict
             policies = api_model_obj.policies
-        self.policies = dict(
-            (
-                p_type,
-                [DnPropertyEncoder("__policies", dn, self._udm_module.session).decode() for dn in dns],
-            )
+        self.policies = {
+            p_type: [
+                DnPropertyEncoder("__policies", dn, self._udm_module.session).decode() for dn in dns
+            ]
             for p_type, dns in policies.items()
-        )
+        }
 
         self.props = self.udm_prop_class(self)
         dn_regex = await self._udm_module.session.dn_regex
@@ -845,11 +842,11 @@ class UdmObject(BaseObject):
         ]  # ["dn", ..., "properties", "objectType"]
         if all(attr in udm_api_response for attr in api_obj_attrs):
             openapi_model_cls = self._udm_module.session.openapi_model(udm_api_response["objectType"])
-            api_model_kwargs = dict(
-                (k, udm_api_response[v])
+            api_model_kwargs = {
+                k: udm_api_response[v]
                 for k, v in openapi_model_cls.attribute_map.items()
                 if v in udm_api_response
-            )
+            }
             return openapi_model_cls(**api_model_kwargs)
 
     async def _follow_move_redirects(self, move_progress_url: str, position: str) -> Dict[str, Any]:

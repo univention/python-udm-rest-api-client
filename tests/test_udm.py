@@ -17,7 +17,8 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-5s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
 )
 logger = logging.getLogger(__name__)
-BAD_MODULE_NAMES = ("policies/admin_user", "policies/thinclient", "settings/data")
+# remove 'users/ldap' from list, when Bug #55189 is fixed
+BAD_MODULE_NAMES = ("policies/admin_user", "policies/thinclient", "settings/data", "users/ldap")
 
 
 @pytest.mark.asyncio
@@ -67,7 +68,7 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
         logger.info("Successful LDAP login.")
         conn.search(
             search_base=base_dn,
-            search_filter="(&" "(univentionObjectType=*)" "(!(univentionObjectFlag=functional))" ")",
+            search_filter="(&(univentionObjectType=*)(!(univentionObjectFlag=functional)))",
             attributes=["univentionObjectType", "univentionObjectFlag", "entryUUID"],
         )
     all_objs = {}
@@ -77,7 +78,7 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
             object_type = result["univentionObjectType"].value
             if object_type not in BAD_MODULE_NAMES and "://" not in result.entry_dn:  # Bug #50175
                 all_objs.setdefault(object_type, []).append(result)
-        module_names = [str(m) for m in all_objs.keys()]
+        module_names = [str(m) for m in all_objs]
         # ignore for now: Bug 54064 - UDM REST API does not handle nagios/service objects
         # HTTP 500 - RuntimeError: Object was not opened
         module_names = [m for m in module_names if m != "nagios/service"]

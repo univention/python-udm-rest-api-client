@@ -35,8 +35,10 @@ JAR_URL = "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli
 JAR_SHA1_URL = f"{JAR_URL}.sha1"
 TARGET_PYTHON_PACKAGE_NAME = "openapi_client_udm"
 TARGET_SCHEMA_FILENAME = "udm_openapi.json"
+OPENAPI_CLIENT_UDM_PACKAGE_VERSION = "1.0.1"  # see Bug #55129
 OPENAPI_GENERATE_COMMAND_COMMON = (
-    f"generate -g python-legacy --library asyncio --package-name {TARGET_PYTHON_PACKAGE_NAME}"
+    f"generate -g python-legacy --library asyncio --package-name {TARGET_PYTHON_PACKAGE_NAME} "
+    f"--additional-properties=packageVersion={OPENAPI_CLIENT_UDM_PACKAGE_VERSION}"
 )
 DOCKER_RUN_COMMAND = (
     f"{OPENAPI_GENERATE_COMMAND_COMMON} -i /local/{TARGET_SCHEMA_FILENAME} -o /local/python"

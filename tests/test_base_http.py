@@ -2,6 +2,8 @@
 
 """Tests for `udm_rest_client.base_http` module."""
 
+
+import contextlib
 import copy
 import datetime
 import inspect
@@ -14,9 +16,9 @@ from unittest.mock import MagicMock, patch
 from urllib.parse import unquote
 
 import attr
-import faker
 import pytest
 from ldap3 import NO_ATTRIBUTES
+from openapi_client_udm import api_client
 
 import udm_rest_client.base_http as base_http
 from udm_rest_client.base_http import _ldap_base_cache
@@ -34,13 +36,16 @@ from udm_rest_client.exceptions import (
 )
 from udm_rest_client.udm import UDM
 
+PY38 = sys.version_info >= (3, 8)
+
+if PY38:
+    from unittest.mock import AsyncMock  # pragma: no-cover-py-lt-38
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s %(levelname)-5s [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
 )
 logger = logging.getLogger(__name__)
-fake = faker.Faker()
-PY38 = sys.version_info >= (3, 8)
 
 
 def test_is_api_model():
@@ -145,17 +150,17 @@ async def test_openapi_class(udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_udm_module_module_unknown(udm_kwargs):
+async def test_udm_module_module_unknown(faker, udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
-        for name in (f"groups/{fake.pystr()}", fake.pystr()):
+        for name in (f"groups/{faker.pystr()}", faker.pystr()):
             with pytest.raises(UnknownModuleType):
                 udm.get(name)
 
 
 @pytest.mark.asyncio
-async def test_udm_openapi_class_unknown(udm_kwargs):
+async def test_udm_openapi_class_unknown(faker, udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
-        for name in (f"groups/{fake.pystr()}", fake.pystr()):
+        for name in (f"groups/{faker.pystr()}", faker.pystr()):
             with pytest.raises(UnknownModuleType):
                 udm.session.openapi_class(name)
 
@@ -385,7 +390,7 @@ async def test_create_user(fake_user, udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_creating_obj_with_bad_property_value(fake_user, udm_kwargs):
+async def test_creating_obj_with_bad_property_value(faker, fake_user, udm_kwargs):
     user_data = fake_user()
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
@@ -396,7 +401,7 @@ async def test_creating_obj_with_bad_property_value(fake_user, udm_kwargs):
         obj.options = user_data.options
         for k, v in attr.asdict(user_data.props).items():
             setattr(obj.props, k, v)
-        obj.props.birthday = fake.pystr()
+        obj.props.birthday = faker.pystr()
         with pytest.raises(CreateError):
             await obj.save()
 
@@ -447,15 +452,16 @@ async def test_modify_user(fake_user, user_created_via_http, udm_kwargs):
 
 @pytest.mark.asyncio
 async def test_add_attribute_of_previously_deactivated_option(
-    http_headers_write, test_server_configuration, udm_kwargs
+    faker, http_headers_write, test_server_configuration, udm_kwargs
 ):
+    # TODO: ensure deletion of share using a fixture
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("shares/share")
         obj = await mod.new()
         obj.options = {"samba": True}
-        obj.props.name = fake.first_name()
+        obj.props.name = faker.unique.user_name()
         obj.props.host = "file.example.com"
-        obj.props.path = f"/home/share{fake.first_name()}"
+        obj.props.path = f"/home/share{faker.first_name()}"
         await obj.save()
 
         obj_new = await mod.get(obj.dn)
@@ -497,6 +503,8 @@ async def test_add_attribute_of_previously_deactivated_option(
         assert hasattr(obj_new2.props, "root_squash")
         assert obj.props.root_squash is True
 
+        await obj_new2.delete()
+
 
 @pytest.mark.asyncio
 async def test_move_user_no_props_changed(new_cn, user_created_via_http, udm_kwargs):
@@ -527,7 +535,7 @@ async def test_move_user_no_props_changed(new_cn, user_created_via_http, udm_kwa
 
 
 @pytest.mark.asyncio
-async def test_move_and_modify_user(new_cn, user_created_via_http, udm_kwargs):
+async def test_move_and_modify_user(faker, new_cn, user_created_via_http, udm_kwargs):
     old_user_dn, old_user_url, old_user_data = user_created_via_http()
     cn_dn, cn_obj_url, cn_data = new_cn()
     async with UDM(**udm_kwargs) as udm:
@@ -539,9 +547,9 @@ async def test_move_and_modify_user(new_cn, user_created_via_http, udm_kwargs):
         assert obj.props.firstname == old_user_data["properties"]["firstname"]
 
         obj.position = cn_dn
-        new_description = fake.text(max_nb_chars=50)
+        new_description = faker.text(max_nb_chars=50)
         obj.props.description = new_description
-        new_lastname = fake.last_name()
+        new_lastname = faker.unique.last_name()
         obj.props.lastname = new_lastname
         res = await obj.save()
         assert res is obj
@@ -565,24 +573,20 @@ async def test_move_multiple_objects(base_dn, new_cn, user_created_via_http, udm
     top_cn_dn, top_cn_obj_url, top_cn_data = new_cn()
     old_cn_dn, old_cn_obj_url, old_cn_data = new_cn(position=top_cn_dn)
     cn_name = old_cn_data["properties"]["name"]
-    users = dict((num, user_created_via_http(position=old_cn_dn)) for num in range(20))
+    users = {num: user_created_via_http(position=old_cn_dn) for num in range(20)}
     with patch.object(base_http, "MIN_FOLLOW_REDIRECT_SLEEP_TIME", 3.0):
         async with UDM(**udm_kwargs) as udm:
             mod_user = udm.get("users/user")
             for dn, url, data in users.values():
                 user_obj = await mod_user.get(dn)
                 assert user_obj.position == old_cn_dn
-
             mod_cn = udm.get("container/cn")
             cn_obj = await mod_cn.get(old_cn_dn)
             assert cn_obj.dn == old_cn_dn
             assert cn_obj.dn != base_dn
-
             cn_obj.position = base_dn
             await cn_obj.save()
-
             assert cn_obj.dn == f"cn={cn_name},{base_dn}"
-
             for dn, url, data in users.values():
                 query = dn.split(",", 1)[0]
                 async for obj in mod_user.search(query):
@@ -677,7 +681,7 @@ async def test_saving_stale_obj_fails(user_created_via_http, udm_kwargs, random_
 
 
 @pytest.mark.asyncio
-async def test_saving_obj_with_bad_property_value(user_created_via_http, udm_kwargs):
+async def test_saving_obj_with_bad_property_value(faker, user_created_via_http, udm_kwargs):
     dn, url, user = user_created_via_http()
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
@@ -686,7 +690,7 @@ async def test_saving_obj_with_bad_property_value(user_created_via_http, udm_kwa
         assert obj.uri == url
         assert obj.props.firstname == user["properties"]["firstname"]
         # OK, got a valid object from LDAP, now modify it but skip the reload
-        obj.props.birthday = fake.pystr()
+        obj.props.birthday = faker.pystr()
         with pytest.raises(ModifyError):
             await obj.save()
 
@@ -726,12 +730,12 @@ async def test_search_existing_user(user_created_via_http, udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_search_at_dn(user_created_via_http, udm_kwargs):
+async def test_search_at_dn(faker, user_created_via_http, udm_kwargs):
     dn, url, user = user_created_via_http()
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
         with pytest.raises(ValueError):
-            [_ async for _ in mod.search(base=dn, scope=fake.pystr())]
+            [_ async for _ in mod.search(base=dn, scope=faker.pystr())]
         async for obj in mod.search(base=dn, scope="base"):
             assert obj.dn == dn
             assert obj.uri == url
@@ -741,11 +745,11 @@ async def test_search_at_dn(user_created_via_http, udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_search_not_existing_user(udm_kwargs):
+async def test_search_not_existing_user(faker, udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
-        query = f"uid={fake.user_name()}"
-        assert [obj async for obj in mod.search(query)] == []
+        query = f"uid={faker.unique.user_name()}"
+        assert not [obj async for obj in mod.search(query)]
 
 
 @pytest.mark.asyncio
@@ -830,7 +834,7 @@ def test_session_warn_min_connection_pool_maxsize():
 
 
 def test_session_warn_insecure_request():
-    for i in range(4, 10):
+    for _ in range(4, 10):
         with warnings.catch_warnings(record=True) as w:
             UDM("A", "B", "http://foo.bar/baz")
             assert len(w) == 1
@@ -843,11 +847,11 @@ def test_session_with_bad_arg():
         UDM("A", "B", "C", foo="bar")
 
 
-def test_session_openapi_model():
+def test_session_openapi_model(faker):
     session = UDM("A", "B", "C").session
     assert session.openapi_model("users/user").__name__ == "UsersUser"
     with pytest.raises(UnknownModuleType):
-        session.openapi_model(f"{fake.pystr()}/{fake.pystr()}")
+        session.openapi_model(f"{faker.pystr()}/{faker.pystr()}")
 
 
 @pytest.mark.asyncio
@@ -871,15 +875,15 @@ async def test_udm_obj_by_dn_good_dn(udm_kwargs, user_created_via_http):
 
 
 @pytest.mark.asyncio
-async def test_session_get_json_bad_url(udm_kwargs):
+async def test_session_get_json_bad_url(faker, udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
-        url = f"{udm_kwargs['url']}/{fake.user_name()}/{fake.user_name()}"
+        url = f"{udm_kwargs['url']}/{faker.unique.user_name()}/{faker.unique.user_name()}"
         with pytest.raises(NoObject):
             await udm.session.get_json(url, ssl=False)
 
 
 @pytest.mark.asyncio
-async def test_session_get_json_no_password_in_log(udm_kwargs):
+async def test_session_get_json_no_password_in_log(faker, udm_kwargs):
     logger = logging.getLogger(base_http.logger.name)
     logger.setLevel(logging.DEBUG)
     stream = io.StringIO()
@@ -891,7 +895,7 @@ async def test_session_get_json_no_password_in_log(udm_kwargs):
         )
     )
     logger.addHandler(handler)
-    txt = fake.pystr()
+    txt = faker.pystr()
     logger.debug(txt)
     handler.flush()
     stream.seek(0)
@@ -919,10 +923,10 @@ async def test_session_get_json_no_password_in_log(udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_bad_module_name(udm_kwargs):
+async def test_bad_module_name(faker, udm_kwargs):
     async with UDM(**udm_kwargs) as udm:
         with pytest.raises(UnknownModuleType):
-            await udm.get(f"{fake.pystr()}")
+            await udm.get(f"{faker.pystr()}")
 
 
 @pytest.mark.asyncio
@@ -964,7 +968,7 @@ async def test_modify_users_self_redirects_to_users_user(
 
 
 @pytest.mark.asyncio
-async def test_obj_eq(user_created_via_http, udm_kwargs):
+async def test_obj_eq(faker, user_created_via_http, udm_kwargs):
     dn, url, user = user_created_via_http()
 
     async with UDM(**udm_kwargs) as udm:
@@ -979,7 +983,37 @@ async def test_obj_eq(user_created_via_http, udm_kwargs):
 
     for attri in ("uri", "uuid"):
         ori_val = getattr(obj, attri)
-        setattr(obj, attri, fake.pystr())
+        setattr(obj, attri, faker.pystr())
         assert obj != obj2
         setattr(obj, attri, ori_val)
         assert obj == obj2
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not PY38, reason="AsyncMock requires python3.8 or higher.")
+@pytest.mark.parametrize(
+    "cid", [(None, None), (None, "X-Foo"), ("12345", None), ("12345", "X-Foo")], ids=lambda x: repr(x)
+)
+async def test_correlation_id(cid, udm_kwargs):  # pragma: no-cover-py-lt-38
+    correlation_id, correlation_id_header = cid
+    udm_kwargs = udm_kwargs.copy()
+    if correlation_id:
+        udm_kwargs["request_id"] = correlation_id
+    if correlation_id_header:
+        udm_kwargs["request_id_header"] = correlation_id_header
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        response_mock = AsyncMock()
+        response_mock.getheader = lambda x: None
+        request_mock = AsyncMock(return_value=response_mock)
+        with patch.object(api_client.ApiClient, "request", request_mock):
+            with contextlib.suppress(AttributeError):  # in call_openapi() -> api_model_obj.dn
+                await mod.get("foo=bar")
+            headers = request_mock.call_args.kwargs["headers"]
+            assert "Access-Control-Expose-Headers" in headers
+            exp_header = correlation_id_header or "X-Request-ID"
+            assert headers["Access-Control-Expose-Headers"] == exp_header
+            assert exp_header in headers
+            assert headers[exp_header]
+            if correlation_id:
+                assert headers[exp_header] == correlation_id
