@@ -268,7 +268,7 @@ class Session:
         self._client: openapi_client_udm.ApiClient = None
         self._session: aiohttp.ClientSession = None
         self._client_task_limiter = asyncio.Semaphore(max_client_tasks)
-        self.request_id = request_id or str(int(uuid.uuid4()))
+        self.request_id = request_id or uuid.uuid4().hex
         self.request_id_header = request_id_header
 
     def open(self) -> None:
