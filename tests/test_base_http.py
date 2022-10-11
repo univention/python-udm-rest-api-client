@@ -696,6 +696,63 @@ async def test_saving_obj_with_bad_property_value(faker, user_created_via_http, 
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error", [
+        ("password", "pass", '1 error(s) occurred:Request argument "password" Password policy error:  The password is too short, at least 8 characters needed!'),
+        ("birthday", "pass", '1 error(s) occurred:Request argument "birthday" The property birthday has an invalid value: Date does not match format "%Y-%m-%d".'),
+    ]
+)
+async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
+    dn, url, user = user_created_via_http()
+    attribute, value, msg = error
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        obj = await mod.get(dn)
+        assert obj.dn == dn
+        obj.props[attribute] = value
+        try:
+            await obj.save()
+        except ModifyError as e:
+            assert str(e) == msg
+            assert e.reason == "Unprocessable Entity"
+            assert isinstance(e.dn, str)
+            assert isinstance(e.error, dict)
+            assert isinstance(e.status, int)
+        else:
+            raise Exception("did not raise ModifyError")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error", [
+        ("e-mail", "pass", '1 error(s) occurred:Request argument "e-mail" The property e-mail has an invalid value: Value must be of type array not str.'),
+        ("username", None, '1 error(s) occurred:Request argument "dn" Information provided is not sufficient. The following properties are missing:username'),
+    ]
+)
+async def test_create_error_exception(udm_kwargs, error, faker):
+    attribute, value, msg = error
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        obj = await mod.new()
+        assert obj.dn is None
+        assert obj.uri == ""
+        obj.props.username = faker.unique.user_name()
+        obj.props.lastname = faker.unique.user_name()
+        obj.props.password = "univention"
+        obj.props[attribute] = value
+        try:
+            await obj.save()
+        except CreateError as e:
+            assert str(e) == msg
+            assert e.reason == "Unprocessable Entity"
+            assert e.dn is None
+            assert isinstance(e.error, dict)
+            assert isinstance(e.status, int)
+        else:
+            raise Exception("did not raise CreateError")
+
+
+@pytest.mark.asyncio
 async def test_to_dict_user(user_created_via_http, udm_kwargs):
     dn, url, user = user_created_via_http()
     async with UDM(**udm_kwargs) as udm:
