@@ -34,21 +34,28 @@ class UdmError(Exception):
 
     msg: str = ""
 
-    def __init__(self, msg: str = None, dn: str = None, module_name: str = None):
+    def __init__(
+        self,
+        msg: str = None,
+        dn: str = None,
+        module_name: str = None,
+        error: dict = None,
+        status: int = None,
+        reason: str = None,
+    ):
         msg = msg or self.msg
         super().__init__(msg)
         self.dn = dn
         self.module_name = module_name
+        self.error = error
+        self.status = status
+        self.reason = reason
 
 
 class APICommunicationError(UdmError):
     """Raised when something goes wrong communicating."""
 
-    def __init__(self, msg: str = None, status: int = None, reason: str = None):
-        self.reason = reason
-        self.status = status
-        msg = msg or reason
-        super().__init__(msg)
+    pass
 
 
 class ConfigurationError(UdmError):

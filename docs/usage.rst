@@ -118,3 +118,24 @@ A different one can be set, by passing it with the ``request_id_header`` argumen
 The name of the header that is sent, will be in the header ``Access-Control-Expose-Headers``.
 
 If an ID already exists, e.g. when inside a micro services chain, pass it on with ``Session(..., request_id="123abc")``.
+
+Errors and exceptions
+---------------------
+
+Detailed information about errors from the UDM REST Server are passed to
+the UDM REST Client in the ``CreateError`` and ``ModifyError`` exceptions::
+
+    try:
+        await obj.save()
+    except CreateError as e:
+        # str with human readable error message
+        str(e)
+        # str with the error reason, e.g. "Unprocessable Entity"
+        e.reason
+        # None or str of the DN of the object
+        e.dn
+        # int of the HTTP status
+        e.status # int of the HTTP status
+        # None or dict with detailed information about the error, e.g.
+        #  {'password': 'Password policy error:  The password is too short, at least 8 characters needed!'}
+        e.error

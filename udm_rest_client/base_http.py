@@ -469,14 +469,18 @@ class Session:
                         logger.error("Last retry unsuccessful.")
                         # fall through
                 reason = exc.reason
+                msg = reason
+                error = None
+                resp_obj = json.loads(exc.body)
                 if exc.body:
                     with contextlib.suppress(KeyError, ValueError):
                         resp_obj = json.loads(exc.body)
-                        reason = f"{reason}: {resp_obj['error']['error']}"
+                        msg = resp_obj["error"]["message"].replace("\n", "")
+                        error = resp_obj['error']['error']
                 if exc.status == 422 and operation == "create":
-                    raise CreateError(reason) from exc
+                    raise CreateError(msg, reason=reason, error=error, dn=dn, status=exc.status) from exc
                 if exc.status == 422 and operation == "update":
-                    raise ModifyError(reason) from exc
+                    raise ModifyError(msg, reason=reason, error=error, dn=dn, status=exc.status) from exc
                 raise APICommunicationError(
                     f"[HTTP {exc.status}]: for operation {operation!r} on "
                     f"{udm_module_name!r} with arguments {kwargs!r}: {reason}",
