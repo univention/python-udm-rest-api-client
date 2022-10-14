@@ -721,14 +721,13 @@ async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
         obj.props[attribute] = value
         try:
             await obj.save()
+            assert False  # pragma: no cover
         except ModifyError as e:
             assert str(e) == msg
             assert e.reason == "Unprocessable Entity"
             assert isinstance(e.dn, str)
             assert isinstance(e.error, dict)
             assert isinstance(e.status, int)
-        else:
-            raise Exception("did not raise ModifyError")
 
 
 @pytest.mark.asyncio
@@ -760,14 +759,13 @@ async def test_create_error_exception(udm_kwargs, error, faker):
         obj.props[attribute] = value
         try:
             await obj.save()
+            assert False  # pragma: no cover
         except CreateError as e:
             assert str(e) == msg
             assert e.reason == "Unprocessable Entity"
             assert e.dn is None
             assert isinstance(e.error, dict)
             assert isinstance(e.status, int)
-        else:
-            raise Exception("did not raise CreateError")
 
 
 @pytest.mark.asyncio
