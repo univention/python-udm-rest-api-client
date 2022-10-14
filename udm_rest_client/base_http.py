@@ -476,7 +476,7 @@ class Session:
                     with contextlib.suppress(KeyError, ValueError):
                         resp_obj = json.loads(exc.body)
                         msg = resp_obj["error"]["message"].replace("\n", "")
-                        error = resp_obj['error']['error']
+                        error = resp_obj["error"]["error"]
                 if exc.status == 422 and operation == "create":
                     raise CreateError(msg, reason=reason, error=error, dn=dn, status=exc.status) from exc
                 if exc.status == 422 and operation == "update":

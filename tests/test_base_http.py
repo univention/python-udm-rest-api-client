@@ -697,10 +697,19 @@ async def test_saving_obj_with_bad_property_value(faker, user_created_via_http, 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "error", [
-        ("password", "pass", '1 error(s) occurred:Request argument "password" Password policy error:  The password is too short, at least 8 characters needed!'),
-        ("birthday", "pass", '1 error(s) occurred:Request argument "birthday" The property birthday has an invalid value: Date does not match format "%Y-%m-%d".'),
-    ]
+    "error",
+    [
+        (
+            "password",
+            "pass",
+            '1 error(s) occurred:Request argument "password" Password policy error:  The password is too short, at least 8 characters needed!',
+        ),
+        (
+            "birthday",
+            "pass",
+            '1 error(s) occurred:Request argument "birthday" The property birthday has an invalid value: Date does not match format "%Y-%m-%d".',
+        ),
+    ],
 )
 async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
     dn, url, user = user_created_via_http()
@@ -724,10 +733,19 @@ async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "error", [
-        ("e-mail", "pass", '1 error(s) occurred:Request argument "e-mail" The property e-mail has an invalid value: Value must be of type array not str.'),
-        ("username", None, '1 error(s) occurred:Request argument "dn" Information provided is not sufficient. The following properties are missing:username'),
-    ]
+    "error",
+    [
+        (
+            "e-mail",
+            "pass",
+            '1 error(s) occurred:Request argument "e-mail" The property e-mail has an invalid value: Value must be of type array not str.',
+        ),
+        (
+            "username",
+            None,
+            '1 error(s) occurred:Request argument "dn" Information provided is not sufficient. The following properties are missing:username',
+        ),
+    ],
 )
 async def test_create_error_exception(udm_kwargs, error, faker):
     attribute, value, msg = error

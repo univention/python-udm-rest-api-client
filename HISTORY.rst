@@ -2,6 +2,11 @@
 History
 =======
 
+1.0.10 (2022-10-13)
+-------------------
+
+* Pass trough UDM REST API error in ``CreateError`` and ``ModifyError`` exceptions.
+
 1.0.9 (2022-09-15)
 ------------------
 
