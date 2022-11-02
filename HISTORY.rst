@@ -2,6 +2,11 @@
 History
 =======
 
+1.0.12 (2022-11-02)
+-------------------
+
+* Add the possibility to send an Accept-Language header with each request.
+
 1.0.11 (2022-10-19)
 -------------------
 
