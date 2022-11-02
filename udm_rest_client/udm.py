@@ -100,6 +100,7 @@ class UDM:
         max_client_tasks: int = 10,
         request_id: str = None,
         request_id_header: str = "X-Request-ID",
+        language: str = None,
         **kwargs,
     ):
         """
@@ -134,6 +135,8 @@ class UDM:
             REST API. If unset, a new random ID will be generated.
         :param str request_id_header: HTTP header that should be used to send the
             `request_id`. If unset, "X-Request-ID" will be used.
+        :param str language: Language used in the "Accept-Language" header for each
+            request (optional)
         :param kwargs: attributes to set on the HTTP client configuration
             object (:py:class:`openapi_client_udm.configuration.Configuration`)
         :raises univention.udm.exceptions.APICommunicationError: Invalid
@@ -146,6 +149,7 @@ class UDM:
             max_client_tasks=max_client_tasks,
             request_id=request_id,
             request_id_header=request_id_header,
+            language=language,
             **kwargs,
         )
         self._api_version = 2
@@ -186,7 +190,7 @@ class UDM:
         """
         return UdmModule(name, self.session)
 
-    async def obj_by_dn(self, dn: str) -> UdmObject:
+    async def obj_by_dn(self, dn: str, language: str = None) -> UdmObject:
         """
         Load a UDM object without knowing the UDM module type.
 
@@ -198,25 +202,31 @@ class UDM:
             the specific UDM module type could not be loaded
         """
         object_type = await self.session.get_object_type(dn)
-        return await self.get(object_type).get(dn)
+        return await self.get(object_type).get(dn, language=language)
 
     @property
     def api_version(self):
         """Here only for backwards compatibility."""
         return self._api_version
 
-    async def modules_list(self) -> Sequence[str]:
+    async def modules_list(self, language: str = None) -> Sequence[str]:
         """
         Get the list of UDM modules the server knows.
 
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: list of UDM module names
         :rtype: list(str)
         """
         url = urljoin(f"{self.session.openapi_client_config.host}/", "navigation/")
-        body = await self.session.get_json(url, headers={"Accept": "application/hal+json; q=1, application/json; q=0.9"})
+        body = await self.session.get_json(
+            url,
+            language=language,
+            headers={"Accept": "application/hal+json; q=1, application/json; q=0.9"},
+        )
         return sorted(ot["name"] for ot in body["_links"]["udm:object-types"])
 
-    async def unknown_modules(self) -> Sequence[str]:
+    async def unknown_modules(self, language: str = None) -> Sequence[str]:
         """
         Get the list of UDM modules the server knows, but this client doesn't.
 
@@ -224,11 +234,23 @@ class UDM:
         When the list is non-empty, the package `openapi-client-udm` must be
         rebuilt to use them.
 
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: list of UDM modules known by the server but not this client
         :rtype: list(str)
         """
         return [
             name
-            for name in await self.modules_list()
+            for name in await self.modules_list(language=language)
             if not hasattr(openapi_client_udm, f"{_camel_case_name(name)}Api")
         ]
+
+    def set_language(self, language: str) -> None:
+        """
+        Set the language used in the "Accept-Language" header for each
+        request in the current session.
+
+        :param str language: Language used in the "Accept-Language" header
+        :return: None
+        """
+        self.session.set_language(language)
