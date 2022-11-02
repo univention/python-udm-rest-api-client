@@ -119,6 +119,40 @@ The name of the header that is sent, will be in the header ``Access-Control-Expo
 
 If an ID already exists, e.g. when inside a micro services chain, pass it on with ``Session(..., request_id="123abc")``.
 
+
+Language Header
+---------------
+
+An ``Accept-Language`` header can be sent with each request to get
+localized error messages from the ``UDM`` REST API.
+The value can be set, when creating the ``UDM`` Session object.
+If not set, the ``Accept-Language`` Header will not be sent.
+
+When an ``Accept-Language`` header is sent, the UDM REST API error messages
+are translated into the corresponding language. (currently available
+languages: German and English)
+
+To set the ``Accept-Language`` header, pass the ``language`` attribute to the
+``UDM`` constructor: ``UDM(..., language="de-DE")``.
+
+It is also possible to change the ``Accept-Language`` header within a
+``UDM`` context using the ``set_language`` method::
+
+    async with UDM(...) as udm:
+        mod = udm.get("users/user")
+        obj = await mod.get(...)
+        ...
+        udm.set_language("de-DE")
+        obj = await mod.get(...)
+
+
+In addition, the ``Accept-Language`` header can be set for each request
+individually by passing the ``language`` attribute to the request method::
+
+    async with UDM(...) as udm:
+        mod = udm.get("users/user", language="de-DE")
+
+
 Errors and exceptions
 ---------------------
 
