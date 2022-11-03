@@ -213,7 +213,7 @@ class UDM:
         :rtype: list(str)
         """
         url = urljoin(f"{self.session.openapi_client_config.host}/", "navigation/")
-        body = await self.session.get_json(url)
+        body = await self.session.get_json(url, headers={"Accept": "application/hal+json; q=1, application/json; q=0.9"})
         return sorted(ot["name"] for ot in body["_links"]["udm:object-types"])
 
     async def unknown_modules(self) -> Sequence[str]:

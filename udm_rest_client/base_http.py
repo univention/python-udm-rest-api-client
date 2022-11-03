@@ -294,9 +294,9 @@ class Session:
 
     async def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
         request_kwargs = copy.deepcopy(kwargs)
-        request_kwargs.setdefault("headers", {}).update(
-            {"Accept": "application/json", self.request_id_header: self.request_id}
-        )
+        request_kwargs.setdefault("headers", {})
+        request_kwargs["headers"].setdefault("Accept", "application/json")
+        request_kwargs["headers"].setdefault(self.request_id_header, self.request_id)
         request_kwargs["auth"] = aiohttp.BasicAuth(
             self.openapi_client_config.username, self.openapi_client_config.password
         )
