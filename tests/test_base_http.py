@@ -1144,11 +1144,11 @@ async def test_change_language_header_within_session(language, udm_kwargs):  # p
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("lang1,lang2", [(None, None), (None, "de"), ("en", None), ("de", "en")])
-async def test_request_language_header(user_created_via_http, udm_kwargs, lang1, lang2):
+@pytest.mark.parametrize("lang_session,lang_request", [(None, None), (None, "de"), ("en", None), ("de", "en")])
+async def test_request_language_header(user_created_via_http, udm_kwargs, lang_session, lang_request):
     dn, url, user = user_created_via_http()
-    if lang1:
-        udm_kwargs["language"] = lang1
+    if lang_session:
+        udm_kwargs["language"] = lang_session
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
         obj = await mod.get(dn)
@@ -1160,12 +1160,12 @@ async def test_request_language_header(user_created_via_http, udm_kwargs, lang1,
 
         def check_headers():
             headers = request_mock.call_args.kwargs["headers"]
-            if lang2:
+            if lang_request:
                 assert "Accept-Language" in headers
-                assert headers["Accept-Language"] == lang2
-            elif lang1:
+                assert headers["Accept-Language"] == lang_request
+            elif lang_session:
                 assert "Accept-Language" in headers
-                assert headers["Accept-Language"] == lang1
+                assert headers["Accept-Language"] == lang_session
             else:
                 assert "Accept-Language" not in headers
 
@@ -1185,5 +1185,5 @@ async def test_request_language_header(user_created_via_http, udm_kwargs, lang1,
 
             for meth in methods:
                 with contextlib.suppress(AttributeError):
-                    await meth(language=lang2)
+                    await meth(language=lang_request)
                 check_headers()
