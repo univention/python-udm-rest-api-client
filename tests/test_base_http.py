@@ -1160,7 +1160,6 @@ async def test_request_language_header(user_created_via_http, udm_kwargs, lang1,
 
         def check_headers():
             headers = request_mock.call_args.kwargs["headers"]
-            print(headers)
             if lang2:
                 assert "Accept-Language" in headers
                 assert headers["Accept-Language"] == lang2
@@ -1171,23 +1170,20 @@ async def test_request_language_header(user_created_via_http, udm_kwargs, lang1,
                 assert "Accept-Language" not in headers
 
         with patch.object(api_client.ApiClient, "request", request_mock):
-            with contextlib.suppress(AttributeError):  # in call_openapi() -> api_model_obj.dn
-                await udm.obj_by_dn(obj.dn, language=lang2)
-            check_headers()
 
-            with contextlib.suppress(AttributeError):
-                await udm.modules_list(language=lang2)
-            check_headers()
+            methods = [
+                lambda language: udm.obj_by_dn(obj.dn, language=language),
+                lambda language: udm.modules_list(language=language),
+                lambda language: mod.get(dn, language=language),
+                lambda language: mod.search(
+                    f"uid={obj.props['username']}", language=language
+                ).__anext__(),
+                obj.save,
+                obj.reload,
+                obj.delete,
+            ]
 
-            with contextlib.suppress(AttributeError):
-                await mod.get(dn, language=lang2)
-            check_headers()
-
-            with contextlib.suppress(AttributeError):
-                await mod.search(f"uid={obj.props['username']}", language=lang2).__anext__()
-            check_headers()
-
-            for meth in [obj.save, obj.reload, obj.delete]:
+            for meth in methods:
                 with contextlib.suppress(AttributeError):
                     await meth(language=lang2)
                 check_headers()
