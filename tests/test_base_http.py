@@ -1148,7 +1148,9 @@ async def test_change_language_header_within_session(language, udm_kwargs):  # p
 @pytest.mark.parametrize(
     "lang_session,lang_request", [(None, None), (None, "de"), ("en", None), ("de", "en")]
 )
-async def test_request_language_header(user_created_via_http, udm_kwargs, lang_session, lang_request):
+async def test_request_language_header(
+    user_created_via_http, udm_kwargs, lang_session, lang_request
+):  # pragma: no-cover-py-lt-38
     dn, url, user = user_created_via_http()
     if lang_session:
         udm_kwargs["language"] = lang_session
