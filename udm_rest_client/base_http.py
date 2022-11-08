@@ -281,7 +281,7 @@ class Session:
         self._client = openapi_client_udm.ApiClient(self.openapi_client_config)
         self._client.set_default_header("Access-Control-Expose-Headers", self.request_id_header)
         self._client.set_default_header(self.request_id_header, self.request_id)
-        if self.language:
+        if self.language:  # pragma: no-cover-py-lt-38
             self._client.set_default_header("Accept-Language", self.language)
         self._session = self._client.rest_client.pool_manager
 
@@ -293,7 +293,7 @@ class Session:
         self._client = None
 
     def set_language(self, language: str) -> None:
-        if language:
+        if language:  # pragma: no-cover-py-lt-38
             self.language = language
             self._client.set_default_header("Accept-Language", self.language)
 
@@ -311,7 +311,7 @@ class Session:
         request_kwargs["auth"] = aiohttp.BasicAuth(
             self.openapi_client_config.username, self.openapi_client_config.password
         )
-        if language or self.language:
+        if language or self.language:  # pragma: no-cover-py-lt-38
             request_kwargs["headers"].setdefault("Accept-Language", language or self.language)
 
         async with self._client_task_limiter:
@@ -412,7 +412,7 @@ class Session:
         if dn:
             kwargs["dn"] = dn.replace("//", ",/=/,")
         # TODO: make 'retries' and 'retry_wait' configurable
-        if language:
+        if language:  # pragma: no-cover-py-lt-38
             # setting kwargs["accept_language"] does not work, it is overwritten in ApiClient.__call_api
             # so we set the default header before the call and reset it again after the call
             self._client.set_default_header("Accept-Language", language)
@@ -508,9 +508,9 @@ class Session:
                     status=exc.status,
                 ) from exc  # pragma: no cover
             finally:
-                if self.language:
+                if self.language:  # pragma: no-cover-py-lt-38
                     self._client.set_default_header("Accept-Language", self.language)
-                elif self.language is None and "Accept-Language" in self._client.default_headers:
+                elif self.language is None and "Accept-Language" in self._client.default_headers:  # pragma: no-cover-py-lt-38
                     del self._client.default_headers["Accept-Language"]
 
 

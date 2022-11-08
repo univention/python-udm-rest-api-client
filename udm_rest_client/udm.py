@@ -253,4 +253,4 @@ class UDM:
         :param str language: Language used in the "Accept-Language" header
         :return: None
         """
-        self.session.set_language(language)
+        self.session.set_language(language)  # pragma: no-cover-py-lt-38
