@@ -510,7 +510,9 @@ class Session:
             finally:
                 if self.language:  # pragma: no-cover-py-lt-38
                     self._client.set_default_header("Accept-Language", self.language)
-                elif self.language is None and "Accept-Language" in self._client.default_headers:  # pragma: no-cover-py-lt-38
+                elif (
+                    self.language is None and "Accept-Language" in self._client.default_headers
+                ):  # pragma: no-cover-py-lt-38
                     del self._client.default_headers["Accept-Language"]
 
 
