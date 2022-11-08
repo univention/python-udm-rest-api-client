@@ -1144,6 +1144,7 @@ async def test_change_language_header_within_session(language, udm_kwargs):  # p
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not PY38, reason="AsyncMock requires python3.8 or higher.")
 @pytest.mark.parametrize(
     "lang_session,lang_request", [(None, None), (None, "de"), ("en", None), ("de", "en")]
 )
