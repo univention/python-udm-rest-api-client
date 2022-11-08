@@ -311,13 +311,9 @@ class Session:
         request_kwargs["auth"] = aiohttp.BasicAuth(
             self.openapi_client_config.username, self.openapi_client_config.password
         )
-        if language:
-            accept_language = {"Accept-Language": language}
-        elif self.language:
-            accept_language = {"Accept-Language": self.language}
-        else:
-            accept_language = {}
-        request_kwargs["headers"].setdefault(**accept_language)
+        if language or self.language:
+            request_kwargs["headers"].setdefault("Accept-Language", language or self.language)
+
         async with self._client_task_limiter:
             async with self.session.get(url, **request_kwargs) as response:
                 request_kwargs["auth"] = (
