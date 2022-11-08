@@ -106,7 +106,7 @@ def run_openapi_generator_docker_container(target_dir: str, quiet: bool, keep_im
     except docker.errors.ContainerError as exc:
         msg = f"Error in container: {exc!s}"
         if exc.stderr:
-            f"{msg}\n{exc.stderr!s}"
+            msg = f"{msg}\n{exc.stderr!s}"
         print_error_and_exit(msg)
     if not quiet:
         click.echo(docker_log)
