@@ -420,7 +420,7 @@ class Session:
         meth = self.openapi_method(udm_module_name, operation)
         if api_model_obj:
             name_snake_case = "_".join(s.lower() for s in udm_module_name.split("/"))
-            kwargs[name_snake_case] = api_model_obj
+            kwargs[name_snake_case] = api_model_obj  # FIXME: the model name is an implementation detail, replace with *args
         if dn:
             kwargs["dn"] = dn.replace("//", ",/=/,")
         # TODO: make 'retries' and 'retry_wait' configurable
@@ -793,17 +793,15 @@ class UdmObject(BaseObject):
         self.dn = api_model_obj.dn
         self.uri = api_model_obj.uri
         self.uuid = api_model_obj.uuid
-        if hasattr(api_model_obj.options, "attribute_map"):
+        if not isinstance(api_model_obj.options, dict):
             #  openapi_client_udm.models.usersuser_options.UsersuserOptions etc
-            attribute_map: Dict[str, str] = api_model_obj.options.attribute_map
-            self.options = {attribute_map[k]: v for k, v in api_model_obj.options.to_dict().items()}
+            self.options = api_model_obj.options.to_dict(True)
         else:
             # empty dict
             self.options = api_model_obj.options
-        if hasattr(api_model_obj.policies, "attribute_map"):
+        if not isinstance(api_model_obj.policies, dict):
             # openapi_client_udm.models.settingsmswmifilter_policies.SettingsmswmifilterPolicies
-            attribute_map: Dict[str, str] = api_model_obj.policies.attribute_map
-            policies = {attribute_map[k]: v for k, v in api_model_obj.policies.to_dict().items()}
+            policies = api_model_obj.policies.to_dict(True)
         else:
             # empty dict
             policies = api_model_obj.policies
@@ -816,7 +814,10 @@ class UdmObject(BaseObject):
 
         self.props = self.udm_prop_class(self)
         dn_regex = await self._udm_module.session.dn_regex
-        for k, v in api_model_obj.properties.items():
+        properties = api_model_obj.properties
+        if not isinstance(properties, dict):
+            properties = properties.to_dict(True)
+        for k, v in properties.items():
             if isinstance(v, str) and v and dn_regex.match(v):
                 v = DnPropertyEncoder(k, v, self._udm_module.session).decode()
             elif (
