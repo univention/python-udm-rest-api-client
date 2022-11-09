@@ -36,4 +36,4 @@ __all__ = [
 ]
 __author__ = """Daniel Troeder"""
 __email__ = "troeder@univention.de"
-__version__ = "1.0.12"
+__version__ = "1.0.13"
