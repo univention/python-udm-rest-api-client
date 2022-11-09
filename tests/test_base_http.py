@@ -719,15 +719,14 @@ async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
         obj = await mod.get(dn)
         assert obj.dn == dn
         obj.props[attribute] = value
-        try:
+        with pytest.raises(ModifyError) as exc_info:
             await obj.save()
-            assert False  # pragma: no cover
-        except ModifyError as e:
-            assert str(e) == msg
-            assert e.reason == "Unprocessable Entity"
-            assert isinstance(e.dn, str)
-            assert isinstance(e.error, dict)
-            assert isinstance(e.status, int)
+        exc = exc_info.value
+        assert str(exc) == msg
+        assert exc.reason == "Unprocessable Entity"
+        assert isinstance(exc.dn, str)
+        assert isinstance(exc.error, dict)
+        assert isinstance(exc.status, int)
 
 
 @pytest.mark.asyncio
@@ -757,15 +756,14 @@ async def test_create_error_exception(udm_kwargs, error, faker):
         obj.props.lastname = faker.unique.user_name()
         obj.props.password = "univention"
         obj.props[attribute] = value
-        try:
+        with pytest.raises(CreateError) as exc_info:
             await obj.save()
-            assert False  # pragma: no cover
-        except CreateError as e:
-            assert str(e) == msg
-            assert e.reason == "Unprocessable Entity"
-            assert e.dn is None
-            assert isinstance(e.error, dict)
-            assert isinstance(e.status, int)
+        exc = exc_info.value
+        assert str(exc) == msg
+        assert exc.reason == "Unprocessable Entity"
+        assert exc.dn is None
+        assert isinstance(exc.error, dict)
+        assert isinstance(exc.status, int)
 
 
 @pytest.mark.asyncio
