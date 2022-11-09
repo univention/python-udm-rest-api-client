@@ -185,6 +185,7 @@ class Session:
         max_client_tasks: int = 10,
         request_id: str = None,
         request_id_header: str = "X-Request-ID",
+        language: str = None,
         **kwargs,
     ):
         """
@@ -221,6 +222,8 @@ class Session:
             REST API. If unset, a new random ID will be generated.
         :param str request_id_header: HTTP header that should be used to send the
             `request_id`. If unset, "X-Request-ID" will be used.
+        :param str language: Language used in the "Accept-Language" header for each
+            request (optional)
         :param kwargs: attributes to set on the HTTP client configuration
             object (:py:class:`openapi_client_udm.configuration.Configuration`)
         :raises univention.udm.exceptions.APICommunicationError: Invalid
@@ -270,6 +273,7 @@ class Session:
         self._client_task_limiter = asyncio.Semaphore(max_client_tasks)
         self.request_id = request_id or uuid.uuid4().hex
         self.request_id_header = request_id_header
+        self.language = language
 
     def open(self) -> None:
         if self._session:
@@ -277,6 +281,8 @@ class Session:
         self._client = openapi_client_udm.ApiClient(self.openapi_client_config)
         self._client.set_default_header("Access-Control-Expose-Headers", self.request_id_header)
         self._client.set_default_header(self.request_id_header, self.request_id)
+        if self.language:  # pragma: no-cover-py-lt-38
+            self._client.set_default_header("Accept-Language", self.language)
         self._session = self._client.rest_client.pool_manager
 
     async def close(self) -> None:
@@ -286,13 +292,18 @@ class Session:
         self._session = None
         self._client = None
 
+    def set_language(self, language: str) -> None:
+        if language:  # pragma: no-cover-py-lt-38
+            self.language = language
+            self._client.set_default_header("Accept-Language", self.language)
+
     @property
     def session(self) -> aiohttp.ClientSession:
         if not self._session:
             raise RuntimeError("Session is closed.")
         return self._session
 
-    async def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
+    async def get_json(self, url: str, language: str = None, **kwargs) -> Dict[str, Any]:
         request_kwargs = copy.deepcopy(kwargs)
         request_kwargs.setdefault("headers", {})
         request_kwargs["headers"].setdefault("Accept", "application/json")
@@ -300,6 +311,9 @@ class Session:
         request_kwargs["auth"] = aiohttp.BasicAuth(
             self.openapi_client_config.username, self.openapi_client_config.password
         )
+        if language or self.language:  # pragma: no-cover-py-lt-38
+            request_kwargs["headers"].setdefault("Accept-Language", language or self.language)
+
         async with self._client_task_limiter:
             async with self.session.get(url, **request_kwargs) as response:
                 request_kwargs["auth"] = (
@@ -388,6 +402,7 @@ class Session:
         operation: str,
         dn: str = None,
         api_model_obj: Union[ApiModel, Dict[str, Any]] = None,
+        language: str = None,
         **kwargs,
     ) -> Tuple[Union[ApiModel, List[ApiModel]], int, Dict[str, str]]:
         meth = self.openapi_method(udm_module_name, operation)
@@ -397,6 +412,11 @@ class Session:
         if dn:
             kwargs["dn"] = dn.replace("//", ",/=/,")
         # TODO: make 'retries' and 'retry_wait' configurable
+        if language:  # pragma: no-cover-py-lt-38
+            # setting kwargs["accept_language"] does not work, it is overwritten in ApiClient.__call_api
+            # so we set the default header before the call and reset it again after the call
+            self._client.set_default_header("Accept-Language", language)
+
         retries = 3
         retry_wait = 10
         while True:
@@ -487,6 +507,13 @@ class Session:
                     reason=reason,
                     status=exc.status,
                 ) from exc  # pragma: no cover
+            finally:
+                if self.language:  # pragma: no-cover-py-lt-38
+                    self._client.set_default_header("Accept-Language", self.language)
+                elif (
+                    self.language is None and "Accept-Language" in self._client.default_headers
+                ):  # pragma: no-cover-py-lt-38
+                    del self._client.default_headers["Accept-Language"]
 
 
 class UdmObjectProperties(BaseObjectProperties):
@@ -571,10 +598,12 @@ class UdmObject(BaseObject):
                 return False
         return True
 
-    async def reload(self) -> "UdmObject":
+    async def reload(self, language: str = None) -> "UdmObject":
         """
         Refresh object from LDAP.
 
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: self
         :rtype: udm_rest_client.UdmObject
         """
@@ -586,7 +615,7 @@ class UdmObject(BaseObject):
             )
         if not self.dn or not self._api_obj:
             raise NotYetSavedError(module_name=self._udm_module.name)
-        api_obj = await self._udm_module._get_api_object(self.dn)
+        api_obj = await self._udm_module._get_api_object(self.dn, language=language)
         self._api_obj = api_obj
         if api_obj.object_type != self._udm_module.name:
             # probably only happens with users/self
@@ -594,10 +623,12 @@ class UdmObject(BaseObject):
         await self._copy_from_api_instance_obj(api_obj)
         return self
 
-    async def save(self) -> "UdmObject":  # noqa: C901
+    async def save(self, language: str = None) -> "UdmObject":  # noqa: C901
         """
         Save object to LDAP (via UDM REST API).
 
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: self
         :rtype: udm_rest_client.UdmObject
         :raises ApiException: when the operation fails
@@ -665,7 +696,7 @@ class UdmObject(BaseObject):
             if self.dn and self._api_obj.position and self._api_obj.position != self.position:
                 # TODO: handle base64 encoded DNs
                 logger.info("Moving {!r} to new position {!r}.".format(self, self.position))
-                api_obj = await self._move(self.position)
+                api_obj = await self._move(self.position, language=language)
                 await self._copy_from_api_instance_obj(api_obj)
                 logger.info("Finished moving object, new DN: %r", self.dn)
 
@@ -687,7 +718,7 @@ class UdmObject(BaseObject):
             "dn": dn,
             "api_model_obj": diff_dict,
         }
-        _, status, header = await self._udm_module.session.call_openapi(**kwargs)
+        _, status, header = await self._udm_module.session.call_openapi(language=language, **kwargs)
         if status in (201, 204):
             new_module_name, new_dn = _uri2module_dn(header["Location"])
             if new_module_name != self._udm_module.name:  # pragma: no cover
@@ -712,13 +743,15 @@ class UdmObject(BaseObject):
                 f"for {operation!r} of {self._udm_module.name!r} {dn!r}."
             )
         self._fresh = False
-        await self.reload()
+        await self.reload(language=language)
         return self
 
-    async def delete(self) -> None:
+    async def delete(self, language=None) -> None:
         """
         Remove the object from the LDAP database.
 
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: None
         """
         if self._deleted:
@@ -727,7 +760,9 @@ class UdmObject(BaseObject):
         if not self.dn or not self._api_obj:
             raise NotYetSavedError()
         try:
-            await self._udm_module.session.call_openapi(self._udm_module.name, "remove", dn=self.dn)
+            await self._udm_module.session.call_openapi(
+                self._udm_module.name, "remove", dn=self.dn, language=language
+            )
         except NoObject as exc:
             logger.warning("When deleting %r: %s", self, exc)
         self._api_obj = None
@@ -815,11 +850,13 @@ class UdmObject(BaseObject):
             "superordinate": self.superordinate,
         }
 
-    async def _move(self, position: str) -> ApiModel:
+    async def _move(self, position: str, language: str = None) -> ApiModel:
         """
         Change the `position` of an object.
 
         :param str position: DN of the objects new position
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: the new ApiModel object from the UDM REST API
         :rtype: ApiModel
         """
@@ -827,7 +864,11 @@ class UdmObject(BaseObject):
         self._api_obj.position = position
         try:
             new_api_obj, status, header = await self._udm_module.session.call_openapi(
-                self._udm_module.name, "modify", dn=self.dn, api_model_obj=self._api_obj
+                self._udm_module.name,
+                "modify",
+                dn=self.dn,
+                api_model_obj=self._api_obj,
+                language=language,
             )
         except APICommunicationError as exc:
             raise MoveError(f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}")
@@ -842,7 +883,9 @@ class UdmObject(BaseObject):
         if status == 200:  # pragma: no cover
             return new_api_obj
 
-        udm_api_response = await self._follow_move_redirects(header["Location"], position)
+        udm_api_response = await self._follow_move_redirects(
+            header["Location"], position, language=language
+        )
 
         api_obj_attrs = [
             attr for attr in self._api_obj.attribute_map.values() if not attr.startswith("_")
@@ -856,7 +899,9 @@ class UdmObject(BaseObject):
             }
             return openapi_model_cls(**api_model_kwargs)
 
-    async def _follow_move_redirects(self, move_progress_url: str, position: str) -> Dict[str, Any]:
+    async def _follow_move_redirects(
+        self, move_progress_url: str, position: str, language: str = None
+    ) -> Dict[str, Any]:
         operation_timeout = 300  # TODO: make configurable?
         start_time = time.time()
         while time.time() - start_time < operation_timeout:
@@ -891,7 +936,9 @@ class UdmObject(BaseObject):
                         "Move operation finished after %.2f seconds.", operation_time
                     )
                 move_progress_url = resp.headers["Location"]
-                resp = await self._udm_module.session.get_json(move_progress_url, allow_redirects=True)
+                resp = await self._udm_module.session.get_json(
+                    move_progress_url, allow_redirects=True, language=language
+                )
                 break
             raise ApiException(
                 f"UDM REST API returned status {resp.status}, headers: {resp.headers!r} "
@@ -1015,12 +1062,14 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         # side effect: check that UDM module `name` exists:
         self.session.openapi_class(name)
 
-    async def new(self, superordinate: str = None) -> UdmObject:
+    async def new(self, superordinate: str = None, language: str = None) -> UdmObject:
         """
         Create a new, unsaved BaseHttpObject object.
 
         :param superordinate: DN or UDM object this one references as its
             superordinate (required by some modules)
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :type superordinate: str or GenericObject
         :return: a new, unsaved :py:class:`udm_rest_client.UdmObject` object
         :rtype: udm_rest_client.UdmObject
@@ -1028,25 +1077,29 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         if self.name not in self._new_object_templates:
             # TODO: turn superordinate into an ApiModel object for _load_udm_object()
             # await self._get_api_object(superordinate / superordinate.dn) ?
-            self._new_object_templates[self.name] = await self._load_udm_object("", superordinate)
+            self._new_object_templates[self.name] = await self._load_udm_object(
+                "", superordinate, language=language
+            )
         new_obj = copy.deepcopy(self._new_object_templates[self.name])
         new_obj._udm_module = self
         return new_obj
 
-    async def get(self, dn: str) -> UdmObject:
+    async def get(self, dn: str, language: str = None) -> UdmObject:
         """
         Load UDM object from LDAP.
 
         :param str dn: DN of the object to load
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: an existing :py:class:`udm_rest_client.BaseHttpObject` object
         :rtype: udm_rest_client.UdmObject
         :raises udm_rest_client.NoObject: if no object is found at `dn`
         :raises udm_rest_client.WrongObjectType: if the object found at `dn` is not of type :py:attr:`self.name`
         """
-        return await self._load_udm_object(dn)
+        return await self._load_udm_object(dn, language=language)
 
     async def search(
-        self, filter_s: str = "", base: str = "", scope: str = "sub"
+        self, filter_s: str = "", base: str = "", scope: str = "sub", language: str = None
     ) -> AsyncIterator[UdmObject]:
         """
         Get all UDM objects from LDAP that match the given filter.
@@ -1055,6 +1108,8 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
             required, objectClasses will be set by the UDM module)
         :param str base: base dn for search
         :param str scope: one of `base`, `one`, `sub` or `children`
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: iterator of :py:class:`UdmObject` objects
         :rtype: Iterator(udm_rest_client.UdmObject)
         """
@@ -1068,17 +1123,21 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
                 raise ValueError("Argument 'scope' must be one of 'sub', base' or 'one'.")
             params["scope"] = scope
 
-        api_model_objs, _, _ = await self.session.call_openapi(self.name, "search", **params)
+        api_model_objs, _, _ = await self.session.call_openapi(
+            self.name, "search", language=language, **params
+        )
         for obj in api_model_objs:
-            yield await self._load_udm_object(api_obj=obj)
+            yield await self._load_udm_object(api_obj=obj, language=language)
 
-    async def _get_api_object(self, dn: str) -> ApiModel:
+    async def _get_api_object(self, dn: str, language: str = None) -> ApiModel:
         """
         Retrieve UDM object from HTTP server.
 
         May raise from :py:exception:`NoObject` if no object is found for `dn`.
 
         :param str dn: the DN of the object to load, '' to load a template object
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: a ApiModel object
         :rtype: ApiModel
         :raises udm_rest_client.NoObject: if no object is found for `dn`
@@ -1088,10 +1147,14 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
             dn = None
         else:
             operation = "get"
-        api_model_obj, status, header = await self.session.call_openapi(self.name, operation, dn=dn)
+        api_model_obj, status, header = await self.session.call_openapi(
+            self.name, operation, dn=dn, language=language
+        )
         return api_model_obj
 
-    async def _load_udm_object(self, dn: str = None, api_obj: ApiModel = None) -> UdmObject:
+    async def _load_udm_object(
+        self, dn: str = None, api_obj: ApiModel = None, language: str = None
+    ) -> UdmObject:
         """
         UdmObject factory.
 
@@ -1100,6 +1163,8 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         :param str dn: the DN of the UDM object to load, '' to load a new one
         :param api_obj: api object instance, if unset one will be loaded over
             HTTP using `dn`
+        :param str language: Language used in the "Accept-Language" header for this
+            request (optional)
         :return: a :py:class:`UdmObject`
         :rtype: udm_rest_client.UdmObject
         :raises udm_rest_client.NoObject: if no object is found for `dn`
@@ -1107,7 +1172,7 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         if not api_obj:
             if dn is None:
                 raise ValueError("Either 'dn' or 'api_obj' must be not be None.")
-            api_obj = await self._get_api_object(dn)
+            api_obj = await self._get_api_object(dn, language=language)
 
         if api_obj.object_type == self.name:
             udm_module = self
