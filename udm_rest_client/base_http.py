@@ -491,7 +491,6 @@ class Session:
                 reason = exc.reason
                 msg = reason
                 error = None
-                resp_obj = json.loads(exc.body)
                 if exc.body:
                     with contextlib.suppress(KeyError, ValueError):
                         resp_obj = json.loads(exc.body)
