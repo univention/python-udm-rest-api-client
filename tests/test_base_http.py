@@ -226,7 +226,7 @@ async def test_dn_property_encoder(random_name):
         str_prop = base_http.DnPropertyEncoder(property_name, dn, session, udm_module).decode()
         assert hasattr(str_prop, "obj")
         obj = await str_prop.obj
-        load_mock.assert_called_with(dn)
+        load_mock.assert_called_with(dn, language=None)
         assert obj == val
 
 
@@ -660,7 +660,7 @@ async def test_saving_stale_obj_fails(user_created_via_http, udm_kwargs, random_
     # should not be possible to save() again
     dn, url, user = user_created_via_http()
 
-    async def _func():
+    async def _func(language):
         pass
 
     async with UDM(**udm_kwargs) as udm:
@@ -1090,3 +1090,105 @@ async def test_correlation_id(cid, udm_kwargs):  # pragma: no-cover-py-lt-38
             assert headers[exp_header]
             if correlation_id:
                 assert headers[exp_header] == correlation_id
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not PY38, reason="AsyncMock requires python3.8 or higher.")
+@pytest.mark.parametrize("language", [None, "de", "de-DE", "en", "en-EN"])
+async def test_session_language_header(language, udm_kwargs):  # pragma: no-cover-py-lt-38
+    udm_kwargs = udm_kwargs.copy()
+    if language:
+        udm_kwargs["language"] = language
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        response_mock = AsyncMock()
+        response_mock.getheader = lambda x: None
+        request_mock = AsyncMock(return_value=response_mock)
+        with patch.object(api_client.ApiClient, "request", request_mock):
+            with contextlib.suppress(AttributeError):  # in call_openapi() -> api_model_obj.dn
+                await mod.get("foo=bar")
+            headers = request_mock.call_args.kwargs["headers"]
+            if language is None:
+                assert "Accept-Language" not in headers
+            else:
+                assert "Accept-Language" in headers
+                assert headers["Accept-Language"] == language
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not PY38, reason="AsyncMock requires python3.8 or higher.")
+@pytest.mark.parametrize("language", [None, "de", "de-DE", "en", "en-EN"])
+async def test_change_language_header_within_session(language, udm_kwargs):  # pragma: no-cover-py-lt-38
+    udm_kwargs = udm_kwargs.copy()
+    udm_kwargs["language"] = "test"
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        response_mock = AsyncMock()
+        response_mock.getheader = lambda x: None
+        request_mock = AsyncMock(return_value=response_mock)
+        with patch.object(api_client.ApiClient, "request", request_mock):
+            with contextlib.suppress(AttributeError):  # in call_openapi() -> api_model_obj.dn
+                await mod.get("foo=bar")
+            headers = request_mock.call_args.kwargs["headers"]
+            assert "Accept-Language" in headers
+            assert headers["Accept-Language"] == "test"
+            udm.set_language(language)
+            with contextlib.suppress(AttributeError):
+                await mod.get("foo=bar")
+            headers = request_mock.call_args.kwargs["headers"]
+            assert "Accept-Language" in headers
+            if language:
+                assert headers["Accept-Language"] == language
+            else:
+                assert headers["Accept-Language"] == "test"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not PY38, reason="AsyncMock requires python3.8 or higher.")
+@pytest.mark.parametrize(
+    "lang_session,lang_request", [(None, None), (None, "de"), ("en", None), ("de", "en")]
+)
+async def test_request_language_header(
+    user_created_via_http, udm_kwargs, lang_session, lang_request
+):  # pragma: no-cover-py-lt-38
+    dn, url, user = user_created_via_http()
+    if lang_session:
+        udm_kwargs["language"] = lang_session
+    async with UDM(**udm_kwargs) as udm:
+        mod = udm.get("users/user")
+        obj = await mod.get(dn)
+        assert obj.dn == dn
+        assert obj.props.firstname == user["properties"]["firstname"]
+        response_mock = AsyncMock()
+        response_mock.getheader = lambda x: None
+        request_mock = AsyncMock(return_value=response_mock)
+
+        def check_headers():
+            headers = request_mock.call_args.kwargs["headers"]
+            if lang_request:
+                assert "Accept-Language" in headers
+                assert headers["Accept-Language"] == lang_request
+            elif lang_session:
+                assert "Accept-Language" in headers
+                assert headers["Accept-Language"] == lang_session
+            else:
+                assert "Accept-Language" not in headers
+
+        with patch.object(api_client.ApiClient, "request", request_mock):
+
+            methods = [
+                lambda language: udm.obj_by_dn(obj.dn, language=language),
+                lambda language: udm.modules_list(language=language),
+                lambda language: mod.get(dn, language=language),
+                lambda language: mod.search(
+                    f"uid={obj.props['username']}", language=language
+                ).__anext__(),
+                obj.save,
+                obj.reload,
+                obj.delete,
+            ]
+
+            for meth in methods:
+                with contextlib.suppress(AttributeError):
+                    await meth(language=lang_request)
+                check_headers()
