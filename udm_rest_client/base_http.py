@@ -50,6 +50,8 @@ from urllib.parse import SplitResult, unquote, urljoin, urlsplit
 import aiohttp
 from async_property import async_cached_property, async_property
 
+import udm_rest_client
+
 from .base import (
     BaseModule,
     BaseModuleMeta,
@@ -265,7 +267,7 @@ class Session:
         for k, v in kwargs.items():
             if not hasattr(self.openapi_client_config, k):
                 raise ConfigurationError(
-                    f"Unknown attribute {k!r} for an " f"'openapi_client_udm.Configuration' object."
+                    f"Unknown attribute {k!r} for an 'openapi_client_udm.Configuration' object."
                 )
             setattr(self.openapi_client_config, k, v)
         self._client: openapi_client_udm.ApiClient = None
@@ -283,6 +285,7 @@ class Session:
         self._client.set_default_header(self.request_id_header, self.request_id)
         if self.language:  # pragma: no-cover-py-lt-38
             self._client.set_default_header("Accept-Language", self.language)
+        self._client.set_default_header("User-Agent", f"udm-rest-client/{udm_rest_client.__version__}")
         self._session = self._client.rest_client.pool_manager
 
     async def close(self) -> None:
@@ -308,6 +311,9 @@ class Session:
         request_kwargs.setdefault("headers", {})
         request_kwargs["headers"].setdefault("Accept", "application/json")
         request_kwargs["headers"].setdefault(self.request_id_header, self.request_id)
+        request_kwargs["headers"].setdefault(
+            "User-Agent", f"udm-rest-client/{udm_rest_client.__version__}"
+        )
         request_kwargs["auth"] = aiohttp.BasicAuth(
             self.openapi_client_config.username, self.openapi_client_config.password
         )

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Top-level package for Python UDM REST Client."""
+__author__ = """Daniel Troeder"""
+__email__ = "troeder@univention.de"
+__version__ = "1.0.13"
 
 from .base_http import UdmModule, UdmObject
 from .exceptions import (
@@ -34,6 +37,3 @@ __all__ = [
     "UnknownModuleType",
     "APICommunicationError",
 ]
-__author__ = """Daniel Troeder"""
-__email__ = "troeder@univention.de"
-__version__ = "1.0.13"
