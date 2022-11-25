@@ -2,6 +2,11 @@
 History
 =======
 
+1.1.0 (2022-11-29)
+-------------------
+
+* Adjust objectType return value of ``users/self`` to latest UCS erratum.
+
 1.0.13 (2022-11-09)
 -------------------
 
