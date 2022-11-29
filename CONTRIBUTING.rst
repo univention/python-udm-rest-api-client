@@ -136,7 +136,7 @@ Tips
 
 To run a subset of tests::
 
-    $ python -m pytest tests/test_base_http.py::test_session_base_dn
+    $ python3 -m pytest tests/test_base_http.py::test_session_base_dn
 
 
 Deploying

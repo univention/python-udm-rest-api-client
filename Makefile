@@ -27,7 +27,7 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
+BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
 
 TEST_CONTAINER_NAME = ucs5
 LXD_IMAGE_FILES_EXIST = . ./lxd.sh && lxd_image_files_exists
@@ -53,7 +53,7 @@ OPENAPI_CLIENT_LIB_IS_INSTALLED = python3 -m pip show -q openapi-client-udm
 
 
 help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -122,7 +122,7 @@ test: ## run tests with the current Python interpreter
 		echo "Starting UCS using LXD. Set UCS_HOST, UCS_USERDN and UCS_PASSWORD to use an existing UCS server."; \
 		make create-lxd-test-server-config; \
 	fi; \
-	python -m pytest -l -v && rv=0 || rv=1; \
+	python3 -m pytest -l -v && rv=0 || rv=1; \
 	echo "Stopping and removing the LXD container..."; \
 	make stop-and-remove-lxd-container; \
 	return $$rv
@@ -180,12 +180,12 @@ release-test: dist ## package and upload a release to the pypi test site
 	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
+	python3 setup.py sdist
+	python3 setup.py bdist_wheel
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
-	python setup.py develop
+	python3 setup.py develop
 
 lxd-is-initialized:
 	@if $(LXD_IS_INITIALIZED); then\
@@ -289,8 +289,8 @@ upload_openapi-client-to-test-pypi: clean  ## build and upload "openapi-client-u
 	curl -u Administrator:univention http://$$UCS_HOST/univention/udm/openapi.json > /tmp/build/udm_openapi.json
 	docker run -u "`id -u`:`id -g`" -v /tmp/build:/local $(OPENAPI_GENERATOR_DOCKER_IMAGE) generate -g python-legacy --library asyncio --package-name openapi_client_udm "--additional-properties=packageVersion=$$PACKAGE_VERSION" -i /local/udm_openapi.json -o /local/python
 	cd /tmp/build/python; \
-	python setup.py sdist; \
-	python setup.py bdist_wheel; \
+	python3 setup.py sdist; \
+	python3 setup.py bdist_wheel; \
 	ls -l dist
 	cd /tmp/build/python; \
 	twine upload --repository-url https://test.pypi.org/legacy/ dist/*

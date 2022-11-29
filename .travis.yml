@@ -30,5 +30,5 @@ install:
     - UCS_HOST=$(sudo sh -c ". $PWD/lxd.sh; lxd_container_ip") make pip-install-openapi-client
     - pip install -U tox-travis
 
-# Command to run tests, e.g. python setup.py test
+# Command to run tests, e.g. python3 setup.py test
 script: UCS_HOST=$(sudo sh -c ". $PWD/lxd.sh; lxd_container_ip") tox
