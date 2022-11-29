@@ -454,7 +454,7 @@ class Session:
                         return api_model_obj.embedded.udmobject, status, header
                     else:
                         # resource
-                        _dn = None if status == 204 else api_model_obj.dn
+                        _dn = None if status == 204 else getattr(api_model_obj, "dn", None)
                         logger.debug(
                             "%r %r -> %s(**%r) -> %s(%r) [%r]",
                             operation,
