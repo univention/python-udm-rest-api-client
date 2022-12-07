@@ -702,12 +702,16 @@ async def test_saving_obj_with_bad_property_value(faker, user_created_via_http, 
         (
             "password",
             "pass",
-            '1 error(s) occurred:Request argument "password" Password policy error:  The password is too short, at least 8 characters needed!',
+            re.compile(
+                r'.*"password" Password policy error.\s\+The password is too short, at least 8 characters needed!'
+            ),
         ),
         (
             "birthday",
             "pass",
-            '1 error(s) occurred:Request argument "birthday" The property birthday has an invalid value: Date does not match format "%Y-%m-%d".',
+            re.compile(
+                '.*"birthday" The property birthday has an invalid value: Date does not match format "%Y-%m-%d".'
+            ),
         ),
     ],
 )
@@ -722,7 +726,7 @@ async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
         with pytest.raises(ModifyError) as exc_info:
             await obj.save()
         exc = exc_info.value
-        assert str(exc) == msg
+        assert msg.search(str(exc))
         assert exc.reason == "Unprocessable Entity"
         assert isinstance(exc.dn, str)
         assert isinstance(exc.error, dict)
@@ -736,12 +740,16 @@ async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
         (
             "e-mail",
             "pass",
-            '1 error(s) occurred:Request argument "e-mail" The property e-mail has an invalid value: Value must be of type array not str.',
+            re.compile(
+                '.*"e-mail" The property e-mail has an invalid value: Value must be of type array not str.'
+            ),
         ),
         (
             "username",
             None,
-            '1 error(s) occurred:Request argument "dn" Information provided is not sufficient. The following properties are missing:username',
+            re.compile(
+                r'.*"dn" Information provided is not sufficient. The following properties are missing:\s*username'
+            ),
         ),
     ],
 )
@@ -759,7 +767,7 @@ async def test_create_error_exception(udm_kwargs, error, faker):
         with pytest.raises(CreateError) as exc_info:
             await obj.save()
         exc = exc_info.value
-        assert str(exc) == msg
+        assert msg.search(str(exc))
         assert exc.reason == "Unprocessable Entity"
         assert exc.dn is None
         assert isinstance(exc.error, dict)
