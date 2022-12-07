@@ -79,9 +79,6 @@ async def test_obj_by_dn(base_dn, ldap_connection, udm_kwargs):
             if object_type not in BAD_MODULE_NAMES and "://" not in result.entry_dn:  # Bug #50175
                 all_objs.setdefault(object_type, []).append(result)
         module_names = [str(m) for m in all_objs]
-        # ignore for now: Bug 54064 - UDM REST API does not handle nagios/service objects
-        # HTTP 500 - RuntimeError: Object was not opened
-        module_names = [m for m in module_names if m != "nagios/service"]
         random.shuffle(module_names)
         logger.info("Reading %d objects of different UDM module types...", len(module_names))
         entries = [random.choice(all_objs[module_name]) for module_name in module_names]
