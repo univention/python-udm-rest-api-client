@@ -703,7 +703,7 @@ async def test_saving_obj_with_bad_property_value(faker, user_created_via_http, 
             "password",
             "pass",
             re.compile(
-                r'.*"password" Password policy error.\s\+The password is too short, at least 8 characters needed!'
+                r'.*"password" Password policy error.\s+The password is too short, at least 8 characters needed!'
             ),
         ),
         (
