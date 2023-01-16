@@ -2,6 +2,11 @@
 History
 =======
 
+1.1.1 (2023-01-16)
+-------------------
+
+* Move operations succeed, when a language header is set.
+
 1.1.0 (2022-11-29)
 -------------------
 

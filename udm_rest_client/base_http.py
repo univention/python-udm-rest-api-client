@@ -865,6 +865,11 @@ class UdmObject(BaseObject):
         :return: the new ApiModel object from the UDM REST API
         :rtype: ApiModel
         """
+        # The `language` argument is now always set, to make sure the language does not switch during
+        # a move operation. The UDM REST API has separate process trees per language, and redirect URLs
+        # are not shared between them.
+        language = language or "en-US"
+
         # workaround for Bug #50262: use PUT instead of PATCH
         self._api_obj.position = position
         try:
@@ -917,6 +922,7 @@ class UdmObject(BaseObject):
                     self._udm_module.session.openapi_client_config.username,
                     self._udm_module.session.openapi_client_config.password,
                 ),
+                headers={"Accept-Language": language},
             )
             try:
                 sleep_time = float(resp.headers["Retry-After"])
