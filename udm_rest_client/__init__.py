@@ -3,7 +3,7 @@
 """Top-level package for Python UDM REST Client."""
 __author__ = """Daniel Troeder"""
 __email__ = "troeder@univention.de"
-__version__ = "1.1.1"
+__version__ = "1.2.1"
 
 from .base_http import UdmModule, UdmObject
 from .exceptions import (

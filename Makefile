@@ -47,7 +47,7 @@ REMOVE_LXD_CONTAINER = . ./lxd.sh && lxd_remove_container
 REMOVE_LXD_IMAGE = . ./lxd.sh && lxd_remove_image
 YQ_IS_INSTALLED = . ./lxd.sh && yq_is_installed
 
-OPENAPI_GENERATOR_DOCKER_IMAGE = "openapitools/openapi-generator-cli:v5.0.0"
+OPENAPI_GENERATOR_DOCKER_IMAGE = "openapitools/openapi-generator-cli:v5.4.0"
 OPENAPI_CLIENT_LIB_NAME = openapi-client-udm
 OPENAPI_CLIENT_LIB_IS_INSTALLED = python3 -m pip show -q openapi-client-udm
 

@@ -17,7 +17,7 @@ Features
 * Automatic handling of HTTP(S) sessions
 * Type annotations
 * 100% test coverage (unittests + integration tests)
-* Python 3.6, 3.7, 3.8, 3.9, 3.10
+* Python 3.6, 3.7, 3.8, 3.9, 3.10, 3.11
 
 
 Usage

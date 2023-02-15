@@ -32,6 +32,8 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Software Development :: Libraries",
         "Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP",
     ],
@@ -50,6 +52,6 @@ setup(
     python_requires=">=3.6",
     scripts=["update_openapi_client"],
     url="https://github.com/univention/python-udm-rest-api-client",
-    version="1.1.1",
+    version="1.2.1",
     zip_safe=False,
 )

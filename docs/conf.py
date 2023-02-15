@@ -74,7 +74,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Python UDM REST Client"
-copyright = "2019, Univention"
+copyright = "2023, Univention"
 author = "Daniel Troeder"
 
 # The version info for the project you're documenting, acts as replacement

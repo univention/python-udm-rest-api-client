@@ -2,6 +2,11 @@
 History
 =======
 
+1.2.1 (2023-02-15)
+-------------------
+
+* Update OpenAPI client library generator (openapitools/openapi-generator-cli) to version ``5.4.0`` to support Python 3.11..
+
 1.1.1 (2023-01-16)
 -------------------
 
