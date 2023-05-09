@@ -1,7 +1,5 @@
 aiohttp>=3.8.1,<4
 async-property>=0.2.1,<0.3
 click>=7,<9
-# docker >6 does not work with ucs 5.0
-docker>=5.0.3,<6
-# docker 5.3.0 does use requests and this breaks update_openapi_client in version 2.30
-requests>=2.26,<2.30
+docker>=6.1.1,<7
+requests>=2.26,<3
