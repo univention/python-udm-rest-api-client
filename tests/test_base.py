@@ -130,7 +130,7 @@ async def test_base_obj_props_iter_items_keys_values_len(user_created_via_http, 
         obj = await mod.get(dn)
     keys_exp = [k for k in obj.props.__dict__.keys() if not k.startswith("_")]
     assert set(keys_exp) == set(obj.props.keys())  # keys
-    assert set(keys_exp) == set(k for k in obj.props)  # iter
+    assert set(keys_exp) == set(obj.props)
     assert len(keys_exp) == len(obj.props)  # len
     for k in keys_exp:
         assert getattr(obj.props, k) in obj.props.values()  # values

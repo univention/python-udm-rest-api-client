@@ -488,7 +488,7 @@ async def test_add_attribute_of_previously_deactivated_option(
                 print(resp.json())
             except (AttributeError, ValueError):  # pragma: no cover
                 print(resp.text)
-            assert resp.status_code in (201, 204)
+            assert resp.status_code in {201, 204}
             obj_new = await mod.get(obj.dn)
         assert obj_new.options.get("samba") is True
         assert obj_new.options.get("nfs") is False

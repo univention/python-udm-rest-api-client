@@ -598,10 +598,7 @@ class UdmObject(BaseObject):
     def __eq__(self, other: "UdmObject") -> bool:
         if not super().__eq__(other):
             return False
-        for attr in ("uri", "uuid"):
-            if getattr(self, attr) != getattr(other, attr):
-                return False
-        return True
+        return all(getattr(self, attr) == getattr(other, attr) for attr in ("uri", "uuid"))
 
     async def reload(self, language: str = None) -> "UdmObject":
         """
@@ -685,22 +682,20 @@ class UdmObject(BaseObject):
                 else:
                     old_policies = self._api_obj.policies
                 # v is Dict[str, List[str]], compare as Dict[str, Set[str]]
-                if {diff_k: set(diff_v) for diff_k, diff_v in v.items()} == {
+                if {diff_k: set(diff_v) for diff_k, diff_v in v.items()} != {
                     new_k: set(new_v) for new_k, new_v in old_policies.items()
                 }:
-                    continue
-                diff_dict[k] = v
+                    diff_dict[k] = v
             elif k == "position" and v:
                 diff_dict[k] = v  # always set position
-            else:
-                if v != old_obj[k]:
-                    diff_dict[k] = v
+            elif v != old_obj[k]:
+                diff_dict[k] = v
         for k in ("options", "policies", "props", "superordinate"):
             if not diff_dict.get(k):
                 diff_dict.pop(k, None)
         if self.dn:
             # 'move' as a separate step before 'modify'
-            if self.dn and self._api_obj.position and self._api_obj.position != self.position:
+            if self._api_obj.position and self._api_obj.position != self.position:
                 # TODO: handle base64 encoded DNs
                 logger.info("Moving {!r} to new position {!r}.".format(self, self.position))
                 api_obj = await self._move(self.position, language=language)
@@ -726,29 +721,28 @@ class UdmObject(BaseObject):
             "api_model_obj": diff_dict,
         }
         _, status, header = await self._udm_module.session.call_openapi(language=language, **kwargs)
-        if status in (201, 204):
-            new_module_name, new_dn = _uri2module_dn(header["Location"])
-            if new_module_name != self._udm_module.name:  # pragma: no cover
-                if not (self._udm_module.name == "users/self" and new_module_name == "users/user"):
-                    logger.warning(
-                        "UDM REST API redirected to an object of a different "
-                        "module. %r of %r returned the 'Location' %r which was"
-                        " decoded to module %r and DN %r. Arguments were: %r ",
-                        operation,
-                        self._udm_module.name,
-                        header["Location"],
-                        new_module_name,
-                        new_dn,
-                        kwargs,
-                    )
-                self._udm_module = UdmModule(new_module_name, self._udm_module.session)
-            self.dn = new_dn
-        else:  # pragma: no cover
+        if status not in {201, 204}:
             # TODO: wrap in {Create/Modify/Move/Delete}Exception
-            raise ApiException(
+            raise ApiException(  # pragma: no cover
                 f"UDM REST API returned status {status}, header: {header!r} "
                 f"for {operation!r} of {self._udm_module.name!r} {dn!r}."
             )
+        new_module_name, new_dn = _uri2module_dn(header["Location"])
+        if new_module_name != self._udm_module.name:  # pragma: no cover
+            if self._udm_module.name != "users/self" or new_module_name != "users/user":
+                logger.warning(
+                    "UDM REST API redirected to an object of a different "
+                    "module. %r of %r returned the 'Location' %r which was"
+                    " decoded to module %r and DN %r. Arguments were: %r ",
+                    operation,
+                    self._udm_module.name,
+                    header["Location"],
+                    new_module_name,
+                    new_dn,
+                    kwargs,
+                )
+            self._udm_module = UdmModule(new_module_name, self._udm_module.session)
+        self.dn = new_dn
         self._fresh = False
         await self.reload(language=language)
         return self
@@ -826,7 +820,7 @@ class UdmObject(BaseObject):
                 and all(dn_regex.match(x) for x in v)  # noqa: 503
             ):
                 v = [DnPropertyEncoder(k, dn, self._udm_module.session).decode() for dn in v]
-            elif isinstance(v, MutableSequence) or isinstance(v, MutableMapping):
+            elif isinstance(v, (MutableSequence, MutableMapping)):
                 # changing obj.property.x should not change obj._api_obj.property.x
                 v = copy.deepcopy(v)
             setattr(self.props, k, v)
@@ -883,7 +877,7 @@ class UdmObject(BaseObject):
                 language=language,
             )
         except APICommunicationError as exc:
-            raise MoveError(f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}")
+            raise MoveError(f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}") from exc
         if status not in (200, 201, 202):  # pragma: no cover
             raise MoveError(
                 f"Error moving {self} to {position!r}:\nHTTP [{status}]\n"
@@ -1155,7 +1149,7 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
         :rtype: ApiModel
         :raises udm_rest_client.NoObject: if no object is found for `dn`
         """
-        if dn == "":
+        if not dn:
             operation = "new"
             dn = None
         else:

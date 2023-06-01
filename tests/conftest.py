@@ -153,7 +153,7 @@ def test_server_configuration(load_test_server_yaml) -> UDMServer:  # noqa: C901
     except (IndexError, KeyError):
         print("Test server config not found in environment.")
     except LDAPInvalidDnError as exc:
-        raise BadTestServerConfig(f"Invalid DN in environment variable 'UCS_USERDN': {exc!s}")
+        raise BadTestServerConfig(f"Invalid DN in environment variable 'UCS_USERDN': {exc!s}") from exc
     except udm_rest_client.exceptions.APICommunicationError as exc:
         raise BadTestServerConfig(
             f"Error connecting to test server using credentials from the "
@@ -297,7 +297,7 @@ def udm_kwargs(test_server_configuration, ucs_ca_file_path) -> Dict[str, Any]:
         "safe_chars_for_path_param": "/",
         "ssl_ca_cert": str(ucs_ca_file_path(test_server_configuration.host)),
     }
-    if not any(c in string.ascii_letters for c in test_server_configuration.host):
+    if all(c not in string.ascii_letters for c in test_server_configuration.host):
         # it's an IP address, don't try to verify the certificate even if we have the CA
         res["verify_ssl"] = False
     return res
@@ -414,9 +414,9 @@ def modify_user_via_http(base_dn, http_headers_write, udm_kwargs):
 
     def _func(dn: str, user: User) -> None:
         url = f"{udm_kwargs['url']}/users/user/{dn}"
-        data = dict((k, v) for k, v in attr.asdict(user).items() if v and k not in ("dn", "uri", "uuid"))
+        data = {k: v for k, v in attr.asdict(user).items() if v and k not in ("dn", "uri", "uuid")}
         properties = data.pop("props", {})
-        data["properties"] = dict((k, v) for k, v in properties.items() if v)
+        data["properties"] = {k: v for k, v in properties.items() if v}
         if udm_kwargs.get("verify_ssl", True):
             verify_ssl = udm_kwargs.get("ssl_ca_cert", False)  # pragma: no cover
         else:
@@ -445,54 +445,55 @@ def delete_user_via_http(base_dn, http_headers_read, udm_kwargs):
 
 
 def pytest_generate_tests(metafunc):
-    if "serialize_obj_data" in metafunc.fixturenames:
-        an_int = fake.pyint()
-        a_float = fake.pyfloat()
-        a_date: datetime.date = fake.date_object()
-        a_dict: Dict[str, Any] = fake.pydict(10, True, int, str, bool, float)
-        a_dict["dict"] = {"nested_bool": fake.pybool(), "nested_int": fake.pyint()}
-        a_dict["date"] = fake.date_object()
-        a_dict["none"] = None
-        a_dict["_ignoreme"] = fake.pyint()
-        a_dict_exp = copy.deepcopy(a_dict)
-        a_dict_exp["date"] = a_dict_exp["date"].strftime("%Y-%m-%d")
-        del a_dict_exp["_ignoreme"]
-        a_list: List[Any] = fake.pylist(10, True, int, str, bool, float)
-        a_list.insert(2, fake.date_object())
-        a_list_exp = copy.deepcopy(a_list)
-        a_list_exp[2] = a_list_exp[2].strftime("%Y-%m-%d")
-        a_tuple = fake.pytuple(10, True, int, str, bool, float)
-        user = UserFactory()
-        user.position = user.position.format(base_dn="dc=base,dc=dn")
-        user.dn = f"uid={user.props.username},{user.position}"
-        a_udm_obj = UsersUserUdmObjectFactory(user_data=user)
-        an_api_obj = openapi_client_udm.models.users_user.UsersUser(
-            dn=f"uid={fake.user_name()},{user.position}",
-            object_type="users/user",
-            properties={fake.first_name(): fake.last_name()},
-            uri=fake.url(),
-            uuid=fake.uuid4(),
-        )
-        test_data = [
-            (None, None),
-            (False, False),
-            (True, True),
-            (an_int, an_int),
-            (a_float, a_float),
-            (a_date, a_date.strftime("%Y-%m-%d")),
-            (a_dict, a_dict_exp),
-            (a_list, a_list_exp),
-            (a_tuple, list(a_tuple)),
-            (a_udm_obj, a_udm_obj.uri),
-            (an_api_obj, an_api_obj.to_dict()),
-            (Path("/tmp"), ValueError),
-        ]
-        random.shuffle(test_data)
-        ids = [
-            f"bool ({val_in})" if type(val_in) is bool else type(val_in).__name__
-            for val_in, val_out in test_data
-        ]
-        metafunc.parametrize("serialize_obj_data", test_data, ids=ids)
+    if "serialize_obj_data" not in metafunc.fixturenames:
+        return
+    an_int = fake.pyint()
+    a_float = fake.pyfloat()
+    a_date: datetime.date = fake.date_object()
+    a_dict: Dict[str, Any] = fake.pydict(10, True, int, str, bool, float)
+    a_dict["dict"] = {"nested_bool": fake.pybool(), "nested_int": fake.pyint()}
+    a_dict["date"] = fake.date_object()
+    a_dict["none"] = None
+    a_dict["_ignoreme"] = fake.pyint()
+    a_dict_exp = copy.deepcopy(a_dict)
+    a_dict_exp["date"] = a_dict_exp["date"].strftime("%Y-%m-%d")
+    del a_dict_exp["_ignoreme"]
+    a_list: List[Any] = fake.pylist(10, True, int, str, bool, float)
+    a_list.insert(2, fake.date_object())
+    a_list_exp = copy.deepcopy(a_list)
+    a_list_exp[2] = a_list_exp[2].strftime("%Y-%m-%d")
+    a_tuple = fake.pytuple(10, True, int, str, bool, float)
+    user = UserFactory()
+    user.position = user.position.format(base_dn="dc=base,dc=dn")
+    user.dn = f"uid={user.props.username},{user.position}"
+    a_udm_obj = UsersUserUdmObjectFactory(user_data=user)
+    an_api_obj = openapi_client_udm.models.users_user.UsersUser(
+        dn=f"uid={fake.user_name()},{user.position}",
+        object_type="users/user",
+        properties={fake.first_name(): fake.last_name()},
+        uri=fake.url(),
+        uuid=fake.uuid4(),
+    )
+    test_data = [
+        (None, None),
+        (False, False),
+        (True, True),
+        (an_int, an_int),
+        (a_float, a_float),
+        (a_date, a_date.strftime("%Y-%m-%d")),
+        (a_dict, a_dict_exp),
+        (a_list, a_list_exp),
+        (a_tuple, list(a_tuple)),
+        (a_udm_obj, a_udm_obj.uri),
+        (an_api_obj, an_api_obj.to_dict()),
+        (Path("/tmp"), ValueError),
+    ]
+    random.shuffle(test_data)
+    ids = [
+        f"bool ({val_in})" if type(val_in) is bool else type(val_in).__name__
+        for val_in, val_out in test_data
+    ]
+    metafunc.parametrize("serialize_obj_data", test_data, ids=ids)
 
 
 @pytest.fixture
