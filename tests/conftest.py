@@ -377,8 +377,9 @@ def http_headers_write():
 
 
 @pytest.fixture
-def user_created_via_http(http_headers_write, udm_kwargs, user_resource_kwargs, delete_user_via_http):
-    created_user_dns = []
+def user_created_via_http(
+    http_headers_write, udm_kwargs, user_resource_kwargs, schedule_delete_object_via_http
+):
     auth = (udm_kwargs["username"], udm_kwargs["password"])
     url = f"{udm_kwargs['url']}/users/user/"
     if udm_kwargs.get("verify_ssl", True):
@@ -396,16 +397,13 @@ def user_created_via_http(http_headers_write, udm_kwargs, user_resource_kwargs, 
             print(resp.json())
         except (AttributeError, ValueError):  # pragma: no cover
             print(resp.text)
-        assert resp.status_code in (201, 204)
+        assert resp.status_code in {201, 204}
         obj_url = resp.headers["Location"]
         dn = unquote(obj_url.rsplit("/", 1)[-1])
-        created_user_dns.append(dn)
+        schedule_delete_object_via_http("users/user", dn)
         return dn, obj_url, data
 
-    yield _func
-
-    for dn in created_user_dns:
-        delete_user_via_http(dn)
+    return _func
 
 
 @pytest.fixture
@@ -429,19 +427,32 @@ def modify_user_via_http(base_dn, http_headers_write, udm_kwargs):
 
 
 @pytest.fixture
-def delete_user_via_http(base_dn, http_headers_read, udm_kwargs):
+def delete_object_via_http(http_headers_read, udm_kwargs) -> Callable[[str, str], None]:
     auth = (udm_kwargs["username"], udm_kwargs["password"])
     if udm_kwargs.get("verify_ssl", True):
         verify_ssl = udm_kwargs.get("ssl_ca_cert", False)  # pragma: no cover
     else:
         verify_ssl = False
 
-    def _func(dn: str) -> None:
-        url = f"{udm_kwargs['url']}/users/user/{dn}"
+    def _delete_object_via_http(udm_module: str, dn: str) -> None:
+        url = f"{udm_kwargs['url']}/{udm_module}/{dn}"
         resp = requests.delete(url, headers=http_headers_read, auth=auth, verify=verify_ssl)
-        assert resp.status_code in (204, 404)
+        assert resp.status_code in {204, 404}
 
-    return _func
+    return _delete_object_via_http
+
+
+@pytest.fixture
+def schedule_delete_object_via_http(delete_object_via_http) -> Callable[[str, str], None]:
+    objects: List[Tuple[str, str]] = []
+
+    def _schedule_delete_object_via_http(udm_module: str, dn: str) -> None:
+        objects.append((udm_module, dn))
+
+    yield _schedule_delete_object_via_http
+
+    for udm_module, dn in objects:
+        delete_object_via_http(udm_module, dn)
 
 
 def pytest_generate_tests(metafunc):
@@ -497,9 +508,8 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture
-def new_cn(base_dn, http_headers_read, http_headers_write, udm_kwargs):
+def new_cn(base_dn, http_headers_read, http_headers_write, schedule_delete_object_via_http, udm_kwargs):
     """Create a new container"""
-    created_cn_dns = []
     auth = (udm_kwargs["username"], udm_kwargs["password"])
     url = f"{udm_kwargs['url']}/container/cn/"
     if udm_kwargs.get("verify_ssl", True):
@@ -507,7 +517,7 @@ def new_cn(base_dn, http_headers_read, http_headers_write, udm_kwargs):
     else:
         verify_ssl = False
 
-    def _func(**cn_kwargs) -> Tuple[str, str, Dict[str, str]]:
+    def _new_cn(**cn_kwargs) -> Tuple[str, str, Dict[str, str]]:
         data = {"properties": {"name": fake.city()}, "position": base_dn}
         data.update(cn_kwargs)
         resp = requests.post(url, headers=http_headers_write, json=data, auth=auth, verify=verify_ssl)
@@ -516,16 +526,11 @@ def new_cn(base_dn, http_headers_read, http_headers_write, udm_kwargs):
             print(resp.json())
         except (AttributeError, ValueError):  # pragma: no cover
             print(resp.text)
-        assert resp.status_code in (201, 204)
+        assert resp.status_code in {201, 204}
         obj_url = resp.headers["Location"]
         dn = unquote(obj_url.rsplit("/", 1)[-1])
-        created_cn_dns.append(dn)
+        schedule_delete_object_via_http("container/cn", dn)
         assert dn == f"cn={data['properties']['name']},{data['position']}"
         return dn, obj_url, data
 
-    yield _func
-
-    for dn in created_cn_dns:
-        url = f"{url}{dn}"
-        resp = requests.delete(url, headers=http_headers_read, auth=auth, verify=verify_ssl)
-        assert resp.status_code in (204, 404)
+    return _new_cn

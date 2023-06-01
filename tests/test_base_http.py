@@ -359,7 +359,7 @@ async def test_reload_new_obj(udm_kwargs):
 
 
 @pytest.mark.asyncio
-async def test_create_user(fake_user, udm_kwargs):
+async def test_create_user(fake_user, schedule_delete_object_via_http, udm_kwargs):
     user_data = fake_user()
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("users/user")
@@ -375,6 +375,7 @@ async def test_create_user(fake_user, udm_kwargs):
 
         res = await obj.save()
 
+        schedule_delete_object_via_http("users/user", obj.dn)
         assert res is obj
         assert obj.dn not in (None, "")
         assert obj.uri not in (None, "")
@@ -385,8 +386,6 @@ async def test_create_user(fake_user, udm_kwargs):
         assert obj_new.props.firstname == obj.props.firstname
         assert obj_new.props.lastname == obj.props.lastname
         assert obj_new.props.birthday == obj.props.birthday
-
-        await obj.delete()
 
 
 @pytest.mark.asyncio
@@ -452,9 +451,8 @@ async def test_modify_user(fake_user, user_created_via_http, udm_kwargs):
 
 @pytest.mark.asyncio
 async def test_add_attribute_of_previously_deactivated_option(
-    faker, http_headers_write, test_server_configuration, udm_kwargs
+    faker, http_headers_write, schedule_delete_object_via_http, test_server_configuration, udm_kwargs
 ):
-    # TODO: ensure deletion of share using a fixture
     async with UDM(**udm_kwargs) as udm:
         mod = udm.get("shares/share")
         obj = await mod.new()
@@ -463,6 +461,7 @@ async def test_add_attribute_of_previously_deactivated_option(
         obj.props.host = "file.example.com"
         obj.props.path = f"/home/share{faker.first_name()}"
         await obj.save()
+        schedule_delete_object_via_http("shares/share", obj.dn)
 
         obj_new = await mod.get(obj.dn)
         assert obj_new.props.name == obj.props.name
@@ -503,11 +502,11 @@ async def test_add_attribute_of_previously_deactivated_option(
         assert hasattr(obj_new2.props, "root_squash")
         assert obj.props.root_squash is True
 
-        await obj_new2.delete()
-
 
 @pytest.mark.asyncio
-async def test_move_user_no_props_changed(new_cn, user_created_via_http, udm_kwargs):
+async def test_move_user_no_props_changed(
+    new_cn, schedule_delete_object_via_http, user_created_via_http, udm_kwargs
+):
     old_user_dn, old_user_url, old_user_data = user_created_via_http()
     cn_dn, cn_obj_url, cn_data = new_cn()
     async with UDM(**udm_kwargs) as udm:
@@ -520,6 +519,7 @@ async def test_move_user_no_props_changed(new_cn, user_created_via_http, udm_kwa
 
         obj.position = cn_dn
         res = await obj.save()
+        schedule_delete_object_via_http("users/user", obj.dn)
         assert res is obj
         assert obj.dn != old_user_dn
         assert obj.dn == f"uid={obj.props.username},{cn_dn}"
@@ -535,7 +535,9 @@ async def test_move_user_no_props_changed(new_cn, user_created_via_http, udm_kwa
 
 
 @pytest.mark.asyncio
-async def test_move_and_modify_user(faker, new_cn, user_created_via_http, udm_kwargs):
+async def test_move_and_modify_user(
+    faker, new_cn, schedule_delete_object_via_http, user_created_via_http, udm_kwargs
+):
     old_user_dn, old_user_url, old_user_data = user_created_via_http()
     cn_dn, cn_obj_url, cn_data = new_cn()
     async with UDM(**udm_kwargs) as udm:
@@ -552,6 +554,7 @@ async def test_move_and_modify_user(faker, new_cn, user_created_via_http, udm_kw
         new_lastname = faker.unique.last_name()
         obj.props.lastname = new_lastname
         res = await obj.save()
+        schedule_delete_object_via_http("users/user", obj.dn)
         assert res is obj
         assert obj.dn != old_user_dn
         assert obj.dn == f"uid={obj.props.username},{cn_dn}"
@@ -569,7 +572,9 @@ async def test_move_and_modify_user(faker, new_cn, user_created_via_http, udm_kw
 
 
 @pytest.mark.asyncio
-async def test_move_multiple_objects(base_dn, new_cn, user_created_via_http, udm_kwargs):
+async def test_move_multiple_objects(
+    base_dn, new_cn, schedule_delete_object_via_http, user_created_via_http, udm_kwargs
+):
     top_cn_dn, top_cn_obj_url, top_cn_data = new_cn()
     old_cn_dn, old_cn_obj_url, old_cn_data = new_cn(position=top_cn_dn)
     cn_name = old_cn_data["properties"]["name"]
@@ -586,10 +591,15 @@ async def test_move_multiple_objects(base_dn, new_cn, user_created_via_http, udm
             assert cn_obj.dn != base_dn
             cn_obj.position = base_dn
             await cn_obj.save()
+            schedule_delete_object_via_http("container/cn", cn_obj.dn)
             assert cn_obj.dn == f"cn={cn_name},{base_dn}"
             for dn, url, data in users.values():
                 query = dn.split(",", 1)[0]
+                objs = []  # schedule deletion for all objects before testing them
                 async for obj in mod_user.search(query):
+                    schedule_delete_object_via_http("users/user", obj.dn)
+                    objs.append(obj)
+                for obj in objs:
                     assert old_cn_dn not in obj.dn
                     assert obj.position == cn_obj.dn
                     assert obj.dn == f"uid={data['properties']['username']},{cn_obj.dn}"
