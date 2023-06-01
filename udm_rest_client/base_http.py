@@ -624,7 +624,9 @@ class UdmObject(BaseObject):
         self._api_obj = api_obj
         if api_obj.object_type != self._udm_module.name:
             # probably only happens with users/self
-            self._udm_module = UdmModule(api_obj.object_type, self._udm_module.session)
+            self._udm_module = UdmModule(  # pragma: no cover
+                api_obj.object_type, self._udm_module.session
+            )
         await self._copy_from_api_instance_obj(api_obj)
         return self
 
@@ -1189,7 +1191,7 @@ class UdmModule(BaseModule, metaclass=UdmModuleMeta):
             udm_module = self
         else:
             # probably only happens with users/self
-            udm_module = UdmModule(api_obj.object_type, self.session)
+            udm_module = UdmModule(api_obj.object_type, self.session)  # pragma: no cover
 
         return await self._udm_object_class._new_from_api_object(api_obj=api_obj, udm_module=udm_module)
 
