@@ -375,7 +375,7 @@ async def test_create_user(fake_user, schedule_delete_object_via_http, udm_kwarg
 
         res = await obj.save()
 
-        schedule_delete_object_via_http("users/user", obj.dn)
+        schedule_delete_object_via_http("users/user", res.dn)
         assert res is obj
         assert obj.dn not in (None, "")
         assert obj.uri not in (None, "")
