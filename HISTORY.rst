@@ -2,6 +2,12 @@
 History
 =======
 
+1.2.2 (2023-06-05)
+-------------------
+
+* Fix ``update_openapi_client`` crashing with newer versions of the Python Docker client and ``requests`` (Issue #10).
+* Testing fixes (Issues #5 and #9)
+
 1.2.1 (2023-02-15)
 -------------------
 
