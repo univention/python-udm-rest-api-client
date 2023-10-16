@@ -758,7 +758,7 @@ async def test_modify_error_exception(user_created_via_http, udm_kwargs, error):
             "username",
             None,
             re.compile(
-                r'.*"dn" Information provided is not sufficient. The following properties are missing:\s*username'
+                r'.*("dn" Information provided is not sufficient. The following properties are missing:\s*username|The property "username" is required.)'
             ),
         ),
     ],
