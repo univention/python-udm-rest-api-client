@@ -918,7 +918,7 @@ class UdmObject(BaseObject):
                     self._udm_module.session.openapi_client_config.username,
                     self._udm_module.session.openapi_client_config.password,
                 ),
-                headers={"Accept-Language": language},
+                headers={"Accept-Language": language, "Accept": "application/json"},
             )
             try:
                 sleep_time = float(resp.headers["Retry-After"])
