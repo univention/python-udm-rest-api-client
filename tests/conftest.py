@@ -107,7 +107,7 @@ def save_test_server_yaml():
 def _test_a_server_configuration(server: UDMServer) -> UDMServer:
     auth = (server.username, server.password)
     url = f"https://{server.host}/univention/udm/ldap/base/"
-    resp = requests.get(url, auth=auth, verify=False)
+    resp = requests.get(url, auth=auth, headers={"Accept": "application/json"}, verify=False)
     if resp.status_code != 200:
         raise udm_rest_client.exceptions.APICommunicationError(  # pragma: no cover
             resp.reason, resp.status_code
