@@ -307,6 +307,12 @@ class Session:
         return self._session
 
     async def get_json(self, url: str, language: str = None, **kwargs) -> Dict[str, Any]:
+        response, content = await self.make_request("GET", url, language, **kwargs)
+        return content
+
+    async def make_request(
+        self, method: str, url: str, language: str = None, **kwargs
+    ) -> Dict[str, Any]:
         request_kwargs = copy.deepcopy(kwargs)
         request_kwargs.setdefault("headers", {})
         request_kwargs["headers"].setdefault("Accept", "application/json")
@@ -333,8 +339,8 @@ class Session:
                     response.status,
                     response.reason,
                 )
-                if 200 <= response.status <= 299:
-                    return await response.json()
+                if 200 <= response.status <= 399:
+                    return response, await response.json()
                 elif 400 <= response.status <= 499:
                     raise NoObject(
                         f"UDM REST API returned status {response.status}, "
@@ -869,7 +875,7 @@ class UdmObject(BaseObject):
         # workaround for Bug #50262: use PUT instead of PATCH
         self._api_obj.position = position
         try:
-            new_api_obj, status, header = await self._udm_module.session.call_openapi(
+            new_api_obj, status, headers = await self._udm_module.session.call_openapi(
                 self._udm_module.name,
                 "modify",
                 dn=self.dn,
@@ -878,19 +884,20 @@ class UdmObject(BaseObject):
             )
         except APICommunicationError as exc:
             raise MoveError(f"Error moving {self} to {position!r}: [{exc.status}] {exc.reason}") from exc
-        if status not in (200, 201, 202):  # pragma: no cover
+        if status > 399:  # pragma: no cover
             raise MoveError(
                 f"Error moving {self} to {position!r}:\nHTTP [{status}]\n"
-                f"response: {new_api_obj!r}\nheader: {header!r}'",
+                f"response: {new_api_obj!r}\nheader: {headers!r}'",
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )
-
         if status == 200:  # pragma: no cover
+            return new_api_obj
+        if "Location" not in headers:
             return new_api_obj
 
         udm_api_response = await self._follow_move_redirects(
-            header["Location"], position, language=language
+            status, headers, position, language=language
         )
 
         api_obj_attrs = [
@@ -906,58 +913,66 @@ class UdmObject(BaseObject):
             return openapi_model_cls(**api_model_kwargs)
 
     async def _follow_move_redirects(
-        self, move_progress_url: str, position: str, language: str = None
+        self, status: int, headers: dict, position: str, language: str = None
     ) -> Dict[str, Any]:
         operation_timeout = 300  # TODO: make configurable?
         start_time = time.time()
-        while time.time() - start_time < operation_timeout:
-            resp = await self._udm_module.session.session.get(
-                move_progress_url,
+        location = headers.get("Location")
+
+        def _select_method(status, method):
+            if status in (301, 303) and method != "HEAD":
+                return method
+            return "GET"
+
+        if location and status in (201, 202):
+            resp, content = await self._udm_module.session.make_request(
+                "GET",
+                location,
                 allow_redirects=False,
-                auth=aiohttp.BasicAuth(
-                    self._udm_module.session.openapi_client_config.username,
-                    self._udm_module.session.openapi_client_config.password,
-                ),
-                headers={"Accept-Language": language, "Accept": "application/json"},
+                language=language,
             )
+            status = resp.status
+            headers = resp.headers
+
+        while time.time() - start_time < operation_timeout:
             try:
-                sleep_time = float(resp.headers["Retry-After"])
-            except (KeyError, ValueError):
-                sleep_time = MIN_FOLLOW_REDIRECT_SLEEP_TIME
-            sleep_time = min(sleep_time, MIN_FOLLOW_REDIRECT_SLEEP_TIME)
-            if resp.status == 301:
-                await asyncio.sleep(sleep_time)
-                # report that we're alive, when moving takes more than 2s
-                operation_time = time.time() - start_time
-                if operation_time > 2 and int(operation_time) % 2 == 0:  # pragma: no cover
-                    logger.debug(
-                        "Waiting on move operation since %.2f seconds...",
-                        operation_time,
-                    )
-                continue  # pragma: no cover
-            if resp.status == 303:
-                operation_time = time.time() - start_time
-                if operation_time > 2:
-                    # we have slept
-                    logger.debug(  # pragma: no cover
-                        "Move operation finished after %.2f seconds.", operation_time
-                    )
-                move_progress_url = resp.headers["Location"]
-                resp = await self._udm_module.session.get_json(
-                    move_progress_url, allow_redirects=True, language=language
+                sleep_time = max(
+                    float(headers.get("Retry-After", MIN_FOLLOW_REDIRECT_SLEEP_TIME)),
+                    MIN_FOLLOW_REDIRECT_SLEEP_TIME,
                 )
-                break
-            raise ApiException(
-                f"UDM REST API returned status {resp.status}, headers: {resp.headers!r} "
-                f"for move of {self} to position {position!r}."
-            )  # pragma: no cover
+            except ValueError:
+                sleep_time = MIN_FOLLOW_REDIRECT_SLEEP_TIME
+            await asyncio.sleep(sleep_time)
+
+            # report that we're alive, when moving takes more than 2s
+            operation_time = time.time() - start_time
+            if operation_time > 2 and int(operation_time) % 2 == 0:  # pragma: no cover
+                logger.debug(
+                    "Waiting on move operation since %.2f seconds...",
+                    operation_time,
+                )
+            if 300 <= status <= 399 and "Location" in headers:
+                location = headers["Location"]
+                resp, content = await self._udm_module.session.make_request(
+                    _select_method(status, resp.method),
+                    location,
+                    allow_redirects=False,
+                    language=language,
+                )
+                status = resp.status
+                headers = resp.headers
+
+            if 300 <= status <= 399 and "Location" in headers:
+                continue
+            break
         else:
             raise MoveError(
                 f"Moving {self} to {position!r} did not complete in " f"{operation_timeout} seconds.",
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )  # pragma: no cover
-        return resp
+
+        return content
 
 
 class UdmModuleMetadata(BaseModuleMetadata):

@@ -1000,7 +1000,7 @@ async def test_session_get_json_no_password_in_log(faker, udm_kwargs):
     logger.removeHandler(handler)
     stream.seek(stream_index)
     stream_content = stream.read()
-    assert "base_http.get_json" in stream_content
+    assert "base_http.make_request" in stream_content
     assert "ldap/base" in stream_content
     assert "application/json" in stream_content
     m = re.match(r".*(auth.: \(.*?\))", stream_content)
