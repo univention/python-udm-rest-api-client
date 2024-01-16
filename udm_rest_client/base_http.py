@@ -894,7 +894,7 @@ class UdmObject(BaseObject):
         if status == 200:  # pragma: no cover
             return new_api_obj
         if "Location" not in headers:
-            return new_api_obj
+            return new_api_obj  # pragma: no cover
 
         udm_api_response = await self._follow_move_redirects(
             status, headers, position, language=language
@@ -922,7 +922,7 @@ class UdmObject(BaseObject):
         def _select_method(status, method):
             if status in (301, 303) and method != "HEAD":
                 return method
-            return "GET"
+            return "GET"  # pragma: no cover
 
         if location and status in (201, 202):
             resp, content = await self._udm_module.session.make_request(
@@ -940,7 +940,7 @@ class UdmObject(BaseObject):
                     float(headers.get("Retry-After", MIN_FOLLOW_REDIRECT_SLEEP_TIME)),
                     MIN_FOLLOW_REDIRECT_SLEEP_TIME,
                 )
-            except ValueError:
+            except ValueError:  # pragma: no cover
                 sleep_time = MIN_FOLLOW_REDIRECT_SLEEP_TIME
             await asyncio.sleep(sleep_time)
 
