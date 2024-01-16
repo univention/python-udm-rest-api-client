@@ -132,10 +132,36 @@ The *UDM REST API* on the UCS server logs into the file ``/var/log/univention/di
 
 Repo permissions
 ----------------
-* GitHub: @dansan and @JuergenBS
-* GitLab: @JuergenBS
-* PyPI: @dansan and @SamuelYaron
-* RTD: @dansan and @SamuelYaron
+* GitHub: @dansan, @SamuelYaron, @brodersen4univention, @twenzel, @botner
+* GitLab: UCS developers
+* PyPI: @dansan, @SamuelYaron, @brodersen4univention, @twenzel, @botner
+* PyPI: @dansan, @SamuelYaron, @brodersen4univention, @twenzel, @botner
+
+Releases
+--------
+
+.. note::
+
+   These instructions require a `PyPI`_ account with permissions for the ``udm-rest-client`` package.
+
+
+* Verify the `daily tests <https://jenkins2022.knut.univention.de/job/UCSschool-5.0/job/UDM-REST-API-client-daily/>`_.
+* Increment the version:
+  * ``udm_rest_client/__init__.py``
+  * ``setup.py``
+* Update ``HISTORY.rst`` with changelog notes.
+* Push the package to test PyPi:
+
+  .. code:: bash
+
+     make release-test
+
+* Verify that the test version works before continuing with the next step.
+* Push the package to production PyPi:
+
+  .. code:: bash
+
+     make release
 
 Credits
 -------
