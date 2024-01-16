@@ -2,6 +2,11 @@
 History
 =======
 
+1.2.3 (2024-01-16)
+-------------------
+
+* The client now handles HTTP status responses from the UDM REST API based on generic range (e.g. 2xx-3xx) instead of specific codes.
+
 1.2.2 (2023-06-05)
 -------------------
 
