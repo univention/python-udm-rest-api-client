@@ -912,17 +912,27 @@ class UdmObject(BaseObject):
             }
             return openapi_model_cls(**api_model_kwargs)
 
+    def _get_redirect_sleep_time(self, headers: dict) -> float:
+        try:
+            sleep_time = max(
+                float(headers.get("Retry-After", MIN_FOLLOW_REDIRECT_SLEEP_TIME)),
+                MIN_FOLLOW_REDIRECT_SLEEP_TIME,
+            )
+        except ValueError:
+            sleep_time = MIN_FOLLOW_REDIRECT_SLEEP_TIME
+        return sleep_time
+
+    def _get_redirect_method(self, status, method):
+        if status in (301, 303) and method != "HEAD":
+            return method
+        return "GET"
+
     async def _follow_move_redirects(
         self, status: int, headers: dict, position: str, language: str = None
     ) -> Dict[str, Any]:
         operation_timeout = 300  # TODO: make configurable?
         start_time = time.time()
         location = headers.get("Location")
-
-        def _select_method(status, method):
-            if status in (301, 303) and method != "HEAD":
-                return method
-            return "GET"  # pragma: no cover
 
         if location and status in (201, 202):
             resp, content = await self._udm_module.session.make_request(
@@ -935,13 +945,7 @@ class UdmObject(BaseObject):
             headers = resp.headers
 
         while time.time() - start_time < operation_timeout:
-            try:
-                sleep_time = max(
-                    float(headers.get("Retry-After", MIN_FOLLOW_REDIRECT_SLEEP_TIME)),
-                    MIN_FOLLOW_REDIRECT_SLEEP_TIME,
-                )
-            except ValueError:  # pragma: no cover
-                sleep_time = MIN_FOLLOW_REDIRECT_SLEEP_TIME
+            sleep_time = self._get_redirect_sleep_time(headers)
             await asyncio.sleep(sleep_time)
 
             # report that we're alive, when moving takes more than 2s
@@ -954,7 +958,7 @@ class UdmObject(BaseObject):
             if 300 <= status <= 399 and "Location" in headers:
                 location = headers["Location"]
                 resp, content = await self._udm_module.session.make_request(
-                    _select_method(status, resp.method),
+                    self._get_redirect_method(status, resp.method),
                     location,
                     allow_redirects=False,
                     language=language,

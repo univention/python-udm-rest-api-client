@@ -1206,3 +1206,60 @@ async def test_request_language_header(
                 with contextlib.suppress(AttributeError):
                     await meth(language=lang_request)
                 check_headers()
+
+
+def test_get_redirect_sleep_time__retry_after_header_missing():
+    udm_obj = base_http.UdmObject()
+    headers = {}
+
+    redirect_sleep_time = udm_obj._get_redirect_sleep_time(headers)
+    assert redirect_sleep_time == base_http.MIN_FOLLOW_REDIRECT_SLEEP_TIME
+
+
+def test_get_redirect_sleep_time__retry_after_greater_than_min_sleep_time():
+    udm_obj = base_http.UdmObject()
+    sleep_time = base_http.MIN_FOLLOW_REDIRECT_SLEEP_TIME + 1
+    headers = {"Retry-After": "%s" % sleep_time}
+
+    redirect_sleep_time = udm_obj._get_redirect_sleep_time(headers)
+    assert redirect_sleep_time == sleep_time
+
+
+def test_get_redirect_sleep_time__retry_after_less_than_min_sleep_time():
+    udm_obj = base_http.UdmObject()
+    sleep_time = base_http.MIN_FOLLOW_REDIRECT_SLEEP_TIME - 1
+    headers = {"Retry-After": "%s" % sleep_time}
+
+    redirect_sleep_time = udm_obj._get_redirect_sleep_time(headers)
+    assert redirect_sleep_time == base_http.MIN_FOLLOW_REDIRECT_SLEEP_TIME
+
+
+def test_get_redirect_sleep_time__retry_after_header_invalid():
+    udm_obj = base_http.UdmObject()
+    headers = {"Retry-After": "never"}
+
+    redirect_sleep_time = udm_obj._get_redirect_sleep_time(headers)
+    assert redirect_sleep_time == base_http.MIN_FOLLOW_REDIRECT_SLEEP_TIME
+
+
+@pytest.mark.parametrize("status", [301, 303])
+@pytest.mark.parametrize("method", ["GET", "POST", "PUT", "DELETE"])
+def test_get_redirect_method(method, status):
+    udm_obj = base_http.UdmObject()
+    redirect_method = udm_obj._get_redirect_method(status, method)
+    assert redirect_method == method
+
+
+@pytest.mark.parametrize("status", [300, 302] + list(range(304, 400)))
+@pytest.mark.parametrize("method", ["GET", "POST", "PUT", "DELETE"])
+def test_get_redirect_method__unexpected_status(method, status):
+    udm_obj = base_http.UdmObject()
+    redirect_method = udm_obj._get_redirect_method(status, method)
+    assert redirect_method == "GET"
+
+
+@pytest.mark.parametrize("status", [301, 303])
+def test_get_redirect_method__head(status):
+    udm_obj = base_http.UdmObject()
+    redirect_method = udm_obj._get_redirect_method(status, "HEAD")
+    assert redirect_method == "GET"
