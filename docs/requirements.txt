@@ -1,1 +1,1 @@
-docutils<0.18  # https://github.com/sphinx-doc/sphinx/issues/9783#issuecomment-952950115
+docutils>=0.20.1,<0.21
