@@ -281,6 +281,7 @@ class Session:
         if self._session:
             return
         self._client = openapi_client_udm.ApiClient(self.openapi_client_config)
+        self._client.configuration.access_token = None
         self._client.set_default_header("Access-Control-Expose-Headers", self.request_id_header)
         self._client.set_default_header(self.request_id_header, self.request_id)
         if self.language:  # pragma: no-cover-py-lt-38
