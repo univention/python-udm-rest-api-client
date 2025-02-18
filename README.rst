@@ -14,7 +14,7 @@ Repo permissions
 
 * **GitHub**:
    * @dansan (Daniel Tröder)
-   * @JuergenBS (Jürn Brodersen)
+   * @JuergenBS (Sönke)
 * **GitLab**: UCS developers
 * **PyPI**:
    * @botner (Felix Botner)
