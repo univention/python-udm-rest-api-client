@@ -2,6 +2,12 @@
 History
 =======
 
+1.3.0 (2025-02-18)
+------------------
+
+* Update docker dependency to v7.
+* Drop support for python 3.6, python 3.7 and python 3.8.
+
 1.2.3 (2024-01-16)
 -------------------
 
