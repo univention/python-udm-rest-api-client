@@ -53,7 +53,7 @@ repos:
         stages: [manual]
         entry: black --config .black
 -   repo: https://github.com/pycqa/flake8
-    rev: 5.0.4
+    rev: 7.1.2
     hooks:
     -   id: flake8
 -   repo: https://github.com/PyCQA/bandit
