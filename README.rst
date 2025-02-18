@@ -1,3 +1,9 @@
+.. image:: https://img.shields.io/badge/renovate-enabled-brightgreen.svg
+    :target: ../issues/?search=Dependency%20Dashboard
+
+.. image:: https://img.shields.io/badge/renovate-pipeline-brightgreen.svg
+    :target: ../pipelines/new?var[RUN_RENOVATE]=yes
+
 ######################
 Python UDM REST Client
 ######################

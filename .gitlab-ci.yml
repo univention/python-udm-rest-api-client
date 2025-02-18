@@ -1,12 +1,25 @@
-# Copyright (C) 2024 Univention GmbH
-#
-# SPDX-License-Identifier: AGPL-3.0-only
+variables:
+  RUN_RENOVATE:
+    value: "no"
+    options:
+      - "yes"
+      - "no"
+    description: "Set to yes if you want to run renovate"
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_OPEN_MERGE_REQUESTS
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_PROTECTED == "true"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "webide"
+    - if: $RUN_RENOVATE == "yes"
 
 include:
+  - local: /.gitlab-ci/gitlab-ci.yml
+    rules:
+      - if: $RUN_RENOVATE != "yes"
   - project: univention/dist/docker-services
     file:
-      - pre-commit.yml
-
-pre-commit:
-  needs: []
-  extends: .pre-commit
+      - renovatebot/renovate.gitlab-ci.yml
+    rules:
+      - if: $RUN_RENOVATE == "yes"
