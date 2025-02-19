@@ -18,7 +18,7 @@ Features
 * Automatic handling of HTTP(S) sessions
 * Type annotations
 * 100% test coverage (unittests + integration tests)
-* Python 3.6, 3.7, 3.8, 3.9, 3.10, 3.11
+* Python 3.9, 3.10, 3.11
 
 
 Usage
@@ -39,11 +39,6 @@ The ``UDM`` context manager opens and closes a HTTP session::
     ...         mod = udm.get(mod_name)
     ...         return await mod.get(dn)
     ...
-    >>> # Python 3.6:
-    >>> loop = asyncio.get_event_loop()
-    >>> obj = loop.run_until_complete(get_obj("users/user", "uid=foo,cn=users,BASE-DN"))
-    >>>
-    >>> # Python 3.7+:
     >>> obj = asyncio.run(get_obj("users/user", "uid=foo,cn=users,BASE-DN"))
     >>>
     >>> print(obj)
@@ -106,8 +101,8 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 .. |license| image:: https://img.shields.io/badge/License-AGPL%20v3-orange.svg
     :alt: GNU AGPL V3 license
     :target: https://www.gnu.org/licenses/agpl-3.0
-.. |python| image:: https://img.shields.io/badge/python-3.6+-blue.svg
-    :alt: Python 3.6+
+.. |python| image:: https://img.shields.io/badge/python-3.9+-blue.svg
+    :alt: Python 3.9+
     :target: https://www.python.org/
 .. |code style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :alt: Code style: black
