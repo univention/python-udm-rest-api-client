@@ -228,7 +228,7 @@ def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str
     "library, using the OpenAPI schema from UCS server 'HOST' (FQDN or IP"
     " address)."
 )
-@click.argument("host")
+@click.argument("host", required=False)
 @click.option(
     "--generator",
     type=click.Choice(["docker", "java"], case_sensitive=False),
@@ -265,6 +265,7 @@ def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str
 )
 @click.option("--username", help="The username to authenticate against the UDM REST API.")
 @click.option("--password", help="The password to authenticate against the UDM REST API.")
+@click.option("--file", help="Path to the OpenAPI schema file to use instead of downloading it.")
 @coro
 async def update_openapi_client(
     host: str,
@@ -276,14 +277,25 @@ async def update_openapi_client(
     system: bool,
     username: str,
     password: str,
+    file: str,
 ) -> None:
-    if not host:
-        print_error_and_exit("Address (FQDN or IP address) of UCS host required.")
+    if not file and not (host and username and password):
+        print_error_and_exit("Either --file must be provided, or [host], --username, and --password must be specified.")
     if jar and generator != "java":
         print_error_and_exit("The --jar option can only be used together with '--generator java'.")
     if jar:
         jar = Path(jar)
-    txt = get_openapi_schema(host, username, password, secure)
+
+    if file:
+        file = Path(file).expanduser()
+        if not Path(file).is_file():
+            print_error_and_exit(f"File {file} does not exist or is not a file.")
+        click.echo(f"Using OpenAPI schema file {file} instead of downloading it.")
+        with open(file, "r") as fp:
+            txt = fp.read()
+    else:
+        txt = get_openapi_schema(host, username, password, secure)
+
     with TemporaryDirectory() as temp_dir, open(
         Path(temp_dir, TARGET_SCHEMA_FILENAME), "w"
     ) as temp_file_fp:
