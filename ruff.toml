@@ -1,0 +1,30 @@
+line-length = 105
+target-version = "py37"
+exclude = ["build", "dist", "venv", "docs", "Makefile", "docs/conf.py"]
+
+[lint]
+ignore = ["E203", "E501"]
+select = ["E", "F", "I", "S"]
+
+[lint.isort]
+combine-as-imports = true
+known-first-party = ["udm_rest_client"]
+known-third-party = [
+    "aiohttp",
+    "async_property",
+    "attr",
+    "click",
+    "docker",
+    "factory",
+    "faker",
+    "ldap3",
+    "openapi_client_udm",
+    "pytest",
+    "requests",
+    "ruamel",
+    "setuptools",
+    "urllib3",
+]
+
+[lint.extend-per-file-ignores]
+"tests/*" = ["S"]
