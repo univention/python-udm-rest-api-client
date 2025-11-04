@@ -428,9 +428,11 @@ async def test_modify_user(fake_user, user_created_via_http, udm_kwargs):
         assert res is obj
         assert obj.dn == old_user_dn
         assert obj.uri == old_user_url
+        obj.policies.setdefault("policies/recyclebin", [])  # old UDM versions
         policies = {
             "policies/desktop": [],
             "policies/pwhistory": [],
+            "policies/recyclebin": [],
             "policies/umc": [],
         }
         assert obj.policies == policies
