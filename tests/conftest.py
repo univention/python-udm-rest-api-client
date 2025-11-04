@@ -44,16 +44,13 @@ ca_cert_path: Path = None
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
-class ContainerIpUnknown(Exception):
-    ...
+class ContainerIpUnknown(Exception): ...
 
 
-class BadTestServerConfig(Exception):
-    ...
+class BadTestServerConfig(Exception): ...
 
 
-class NoTestServerConfig(Exception):
-    ...
+class NoTestServerConfig(Exception): ...
 
 
 @pytest.fixture(scope="session")

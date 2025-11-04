@@ -219,7 +219,7 @@ def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str
             f"Error downloading OpenAPI schema from {url!r}: [{resp.status_code}] {resp.reason}"
         )
     txt = resp.text
-    click.echo(f"Downloaded {len(txt)/1024:.1f} KiB.")
+    click.echo(f"Downloaded {len(txt) / 1024:.1f} KiB.")
     return txt
 
 
@@ -246,7 +246,7 @@ def get_openapi_schema(host: str, user: str, password: str, secure: bool) -> str
 @click.option(
     "--keep-image/--dont-keep-image",
     default=False,
-    help="Whether to keep the OpenAPI Generator Docker image (when '--generator" " docker' is used).",
+    help="Whether to keep the OpenAPI Generator Docker image (when '--generator docker' is used).",
 )
 @click.option(
     "--secure/--insecure",

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Top-level package for Python UDM REST Client."""
+
 __author__ = """Daniel Troeder"""
 __email__ = "troeder@univention.de"
 __version__ = "1.2.3"

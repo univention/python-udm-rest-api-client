@@ -2,7 +2,6 @@
 
 """Tests for `udm_rest_client.base_http` module."""
 
-
 import contextlib
 import copy
 import datetime
@@ -1191,7 +1190,6 @@ async def test_request_language_header(
                 assert "Accept-Language" not in headers
 
         with patch.object(api_client.ApiClient, "request", request_mock):
-
             methods = [
                 lambda language: udm.obj_by_dn(obj.dn, language=language),
                 lambda language: udm.modules_list(language=language),

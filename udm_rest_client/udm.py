@@ -56,7 +56,6 @@ Usage::
 [1] https://docs.software-univention.de/developer-reference-4.4.html#udm:rest_api
 """
 
-
 import contextlib
 from typing import Sequence
 from urllib.parse import urljoin

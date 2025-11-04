@@ -100,20 +100,16 @@ ApiModule = TypeVar("ApiModule")  # openapi_client_udm.SharesShareApi etc
 ApiModel = TypeVar("ApiModel")  # openapi_client_udm.SharesShare etc
 
 
-class UdmRestClientWarning(Warning):
-    ...
+class UdmRestClientWarning(Warning): ...
 
 
-class BadSettingsWarning(UdmRestClientWarning):
-    ...
+class BadSettingsWarning(UdmRestClientWarning): ...
 
 
-class InsecureRequestWarning(UdmRestClientWarning):
-    ...
+class InsecureRequestWarning(UdmRestClientWarning): ...
 
 
-class StaleObjectWarning(UdmRestClientWarning):
-    ...
+class StaleObjectWarning(UdmRestClientWarning): ...
 
 
 def _is_api_model(obj: Any) -> bool:
@@ -174,7 +170,7 @@ def _camel_case_name(udm_module_name: str) -> str:
 
     while "_" in cc_name:
         index = cc_name.find("_")
-        cc_name = f"{cc_name[:index]}{cc_name[index + 1].upper()}{cc_name[index + 2:]}"
+        cc_name = f"{cc_name[:index]}{cc_name[index + 1].upper()}{cc_name[index + 2 :]}"
     return cc_name
 
 
@@ -240,8 +236,7 @@ class Session:
         connection_pool_maxsize = kwargs.get("connection_pool_maxsize", 100)
         if connection_pool_maxsize < max_client_tasks:
             txt = (
-                f"Raising 'connection_pool_maxsize' to value of "
-                f"'max_client_tasks' ({max_client_tasks})."
+                f"Raising 'connection_pool_maxsize' to value of 'max_client_tasks' ({max_client_tasks})."
             )
             warnings.warn(txt, BadSettingsWarning)
             logger.warning(txt)
@@ -483,7 +478,7 @@ class Session:
                     ) from exc
                 if exc.status == 404:
                     raise NoObject(
-                        f"[HTTP 404] No {udm_module_name!r} object found for " f"arguments {kwargs!r}.",
+                        f"[HTTP 404] No {udm_module_name!r} object found for arguments {kwargs!r}.",
                         dn=kwargs.get("dn"),
                         module_name=udm_module_name,
                     ) from exc
@@ -971,7 +966,7 @@ class UdmObject(BaseObject):
             break
         else:
             raise MoveError(
-                f"Moving {self} to {position!r} did not complete in " f"{operation_timeout} seconds.",
+                f"Moving {self} to {position!r} did not complete in {operation_timeout} seconds.",
                 dn=self.dn,
                 module_name=self._udm_module.name,
             )  # pragma: no cover
