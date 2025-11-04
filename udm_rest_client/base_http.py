@@ -815,10 +815,10 @@ class UdmObject(BaseObject):
             if isinstance(v, str) and v and dn_regex.match(v):
                 v = DnPropertyEncoder(k, v, self._udm_module.session).decode()
             elif (
-                isinstance(v, list)  # flake8 doesn't like the way black splits this:
-                and v  # noqa: 503
-                and all(isinstance(x, str) for x in v)  # noqa: 503
-                and all(dn_regex.match(x) for x in v)  # noqa: 503
+                isinstance(v, list)
+                and v
+                and all(isinstance(x, str) for x in v)
+                and all(dn_regex.match(x) for x in v)
             ):
                 v = [DnPropertyEncoder(k, dn, self._udm_module.session).decode() for dn in v]
             elif isinstance(v, (MutableSequence, MutableMapping)):
@@ -826,11 +826,7 @@ class UdmObject(BaseObject):
                 v = copy.deepcopy(v)
             setattr(self.props, k, v)
         superordinate: str = getattr(api_model_obj, "superordinate", None)
-        if (
-            superordinate
-            and isinstance(superordinate, str)  # noqa: 503
-            and dn_regex.match(superordinate)  # noqa: 503
-        ):
+        if superordinate and isinstance(superordinate, str) and dn_regex.match(superordinate):
             superordinate_encoder = DnPropertyEncoder(
                 "__superordinate", superordinate, self._udm_module.session
             )
