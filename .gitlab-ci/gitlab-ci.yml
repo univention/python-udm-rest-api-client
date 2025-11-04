@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 include:
-  - project: univention/dist/docker-services
+  - project: univention/infrastructure/docker-services
     file:
       - pre-commit.yml
 
