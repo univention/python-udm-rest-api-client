@@ -428,22 +428,24 @@ async def test_modify_user(fake_user, user_created_via_http, udm_kwargs):
         assert obj.dn == old_user_dn
         assert obj.uri == old_user_url
         obj.policies.setdefault("policies/recyclebin", [])  # old UDM versions
-        policies = {
+
+        expected_policies = {
             "policies/desktop": [],
             "policies/pwhistory": [],
             "policies/recyclebin": [],
             "policies/umc": [],
         }
-        assert obj.policies == policies
+        assert obj.policies == expected_policies
         for k, v in modify_props.items():
             if k == "password":
                 v = None
             assert getattr(obj.props, k) == v
 
         obj_new = await mod.get(old_user_dn)
+        obj_new.policies.setdefault("policies/recyclebin", [])  # old UDM versions
         assert obj_new.dn == old_user_dn
         assert obj_new.uri == old_user_url
-        assert obj_new.policies == policies
+        assert obj_new.policies == expected_policies
         for k, v in modify_props.items():
             if k == "password":
                 v = None
