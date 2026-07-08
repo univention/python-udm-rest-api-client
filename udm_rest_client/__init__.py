@@ -4,7 +4,7 @@
 
 __author__ = """Daniel Troeder"""
 __email__ = "troeder@univention.de"
-__version__ = "1.3.2"
+__version__ = "1.4.0"
 
 from .base_http import UdmModule, UdmObject
 from .exceptions import (

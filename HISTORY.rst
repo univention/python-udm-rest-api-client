@@ -2,6 +2,11 @@
 History
 =======
 
+1.4.0 (2026-07-08)
+------------------
+
+* Add support for specifying the OpenAPI schema via `--file` instead of downloading it on the fly.
+
 1.3.2 (2026-04-07)
 ------------------
 
